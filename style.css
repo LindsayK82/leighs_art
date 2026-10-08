@@ -166,3 +166,45 @@ img { max-width:100%; display:block; }
 
 /* ===== REDUCED MOTION CSS ===== */
 @media (prefers-reduced-motion:reduce) { html { scroll-behavior:auto; } .main-nav a { transition:none; } }
+
+
+/* ===== ABOUT / CV / PRESS CSS ===== */
+/* The artist-information page shares the site's global design tokens and navigation. */
+.about-main { max-width:var(--max); margin:0 auto; padding:0 5% 110px; }
+.about-page-intro { padding:85px 0 55px; border-bottom:1px solid var(--line); }
+.about-page-intro h1 { font-size:clamp(45px,6vw,82px); font-weight:400; letter-spacing:-.055em; line-height:1.1; margin:25px 0 18px; }
+.about-page-intro h1 em { font-family:Georgia,serif; color:var(--accent); font-weight:400; }
+.about-page-intro p { color:var(--muted); font-size:16px; line-height:1.7; margin:0; }
+.about-tabs { display:flex; flex-wrap:wrap; gap:clamp(24px,4vw,60px); border-bottom:1px solid var(--line); margin:0 0 54px; }
+.about-tab { background:transparent; border:0; border-bottom:2px solid transparent; border-radius:0; color:var(--muted); cursor:pointer; font:inherit; font-size:12px; letter-spacing:.16em; text-transform:uppercase; padding:24px 0 18px; }
+.about-tab:hover, .about-tab.active { color:var(--text); }
+.about-tab.active { border-bottom-color:var(--accent); }
+.about-panel[hidden] { display:none !important; }
+.about-panel { max-width:1100px; }
+.about-heading { font-size:clamp(30px,4vw,50px); font-weight:400; letter-spacing:-.035em; margin:0 0 12px; }
+.about-subtitle { color:var(--accent); font-family:Georgia,serif; font-style:italic; font-size:clamp(17px,2vw,23px); margin:0 0 35px; }
+.about-portrait { max-width:600px; margin:0 0 48px; }
+.about-portrait img { max-height:690px; width:100%; object-fit:contain; object-position:left center; }
+.artist-bio { max-width:830px; }
+.artist-bio p { font-size:clamp(15px,1.4vw,18px); line-height:1.95; color:var(--text); margin:0 0 26px; }
+.cv-content, .press-content { margin-top:38px; }
+.cv-section, .press-section { border-top:1px solid var(--line); padding:28px 0 36px; }
+.cv-section h2, .press-section h2 { font-size:clamp(20px,2.4vw,29px); font-weight:400; margin:0 0 23px; }
+.cv-entry, .cv-list li { color:var(--text); font-size:14px; line-height:1.8; margin:0 0 13px; }
+.cv-list { padding-left:22px; margin:0; }
+.cv-content a, .press-content a { color:var(--accent); text-decoration:underline; text-decoration-color:var(--line); text-underline-offset:4px; overflow-wrap:anywhere; }
+.cv-content a:hover, .press-content a:hover { text-decoration-color:var(--accent); }
+.press-entry { display:grid; grid-template-columns:minmax(125px,190px) minmax(0,1fr); gap:15px 30px; padding:23px 0; border-bottom:1px solid var(--line); }
+.press-entry:last-child { border-bottom:0; }
+.press-date { color:var(--muted); font-size:12px; letter-spacing:.045em; line-height:1.7; }
+.press-entry h3 { font-weight:400; font-size:clamp(16px,1.8vw,21px); margin:0 0 7px; line-height:1.5; }
+.press-entry p { margin:0 0 7px; color:var(--muted); font-size:13px; line-height:1.6; }
+.press-subitems { padding-left:18px; margin:10px 0 0; }
+.press-subitems li { line-height:1.7; margin-bottom:5px; font-size:13px; }
+@media (max-width:700px) {
+  .about-main { padding-bottom:65px; }
+  .about-page-intro { padding:65px 0 36px; }
+  .about-tabs { margin-bottom:35px; }
+  .about-portrait { margin-bottom:35px; }
+  .press-entry { grid-template-columns:1fr; gap:5px; }
+}
