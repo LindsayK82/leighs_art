@@ -312,3 +312,31 @@ img { max-width:100%; display:block; }
 .collector-general { max-width:880px; margin:20px auto 0; padding:clamp(25px,5vw,60px); background:var(--surface); }
 /* ===== REVIEWS MOBILE CSS ===== */
 @media(max-width:760px) { .press-grid,.collector-review { grid-template-columns:1fr; } .collector-review:nth-child(even) .review-artwork { order:0; } .reviews-section { margin-bottom:65px; } .collector-reviews { gap:35px; } .collector-review { padding-bottom:35px; } }
+
+/* ===== INVISIBILITY PROJECT PAGE CSS ===== */
+.invisibility-main { padding-bottom:90px; }
+.invisibility-feature { margin:0 0 105px; }
+.invisibility-feature-heading { max-width:850px; margin:0 auto 38px; text-align:center; }
+.invisibility-feature-heading h2,.invisibility-story h2,.invisibility-reading h2,.invisibility-support h2 { font:400 clamp(32px,4.8vw,66px)/1.14 Georgia,serif; margin:16px 0 20px; }
+.invisibility-feature-heading h2 em,.invisibility-story h2 em,.invisibility-reading h2 em,.invisibility-support h2 em { font-weight:400; }
+.invisibility-feature-heading p { color:var(--muted); line-height:1.7; }
+/* ===== FEATURED PAINTING CSS ===== */
+.invisibility-painting { max-width:1000px; margin:0 auto; }
+.invisibility-painting a { display:block; }
+.invisibility-painting img { display:block; width:100%; height:auto; }
+.invisibility-painting figcaption { display:flex; justify-content:space-between; flex-wrap:wrap; gap:12px; color:var(--muted); font-size:12px; line-height:1.7; margin-top:16px; }
+.invisibility-painting figcaption strong { color:var(--text); font-weight:500; }
+.invisibility-not-for-sale { text-align:center; color:var(--accent); font-size:12px; text-transform:uppercase; letter-spacing:.16em; margin-top:32px; }
+/* ===== PROJECT STORY CSS ===== */
+.invisibility-story { display:grid; grid-template-columns:1fr 1fr; gap:clamp(30px,7vw,110px); border-top:1px solid var(--line); padding:80px 0 100px; }
+.invisibility-story-copy p { font-size:clamp(17px,1.55vw,20px); line-height:1.85; margin:0 0 24px; }
+/* ===== FURTHER READING CSS ===== */
+.invisibility-reading { background:var(--surface); padding:clamp(28px,5vw,70px); margin-bottom:70px; }
+.invisibility-reading p,.invisibility-support p { max-width:700px; line-height:1.85; font-size:18px; }
+.invisibility-article-link { display:inline-flex; align-items:center; gap:16px; color:var(--accent); margin-top:18px; padding-bottom:8px; border-bottom:1px solid currentColor; text-decoration:none; }
+.invisibility-article-link:hover { color:var(--text); }
+/* ===== ONGOING PROJECT / SUPPORT CSS ===== */
+.invisibility-support { text-align:center; max-width:780px; margin:0 auto; padding:40px 0 25px; }
+.invisibility-support p { margin:0 auto; }
+/* ===== INVISIBILITY MOBILE CSS ===== */
+@media (max-width:760px) { .invisibility-feature { margin-bottom:65px; } .invisibility-story { grid-template-columns:1fr; padding:55px 0 65px; } .invisibility-reading { margin-bottom:40px; } .invisibility-painting figcaption { display:block; } }
