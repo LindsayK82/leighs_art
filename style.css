@@ -289,3 +289,26 @@ img { max-width:100%; display:block; }
 .installations-link a { display:inline-flex; gap:14px; align-items:center; color:var(--accent); font-size:16px; text-decoration:none; }
 .installations-link a:hover { text-decoration:underline; text-underline-offset:5px; }
 @media (max-width:700px) { .installations-grid { grid-template-columns:1fr; gap:24px; } .installations-link { margin-top:50px; } }
+
+/* ===== REVIEWS PAGE CSS ===== */
+.reviews-main { padding-bottom:35px; }
+.reviews-section { margin-bottom:100px; }
+.reviews-section-heading { margin-bottom:35px; }
+.reviews-section-heading h2 { font-family:Georgia,serif; font-size:clamp(28px,3.5vw,46px); font-weight:400; margin:15px 0 0; }
+/* ===== PRESS REVIEWS CSS ===== */
+.press-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:20px; }
+.press-quote { margin:0; padding:clamp(25px,3.5vw,48px); background:var(--surface); border-top:1px solid var(--line); display:flex; flex-direction:column; justify-content:space-between; }
+.press-quote p { font:clamp(18px,1.8vw,23px)/1.65 Georgia,serif; margin:0 0 28px; }
+.press-quote footer,.review-copy footer,.collector-general footer { color:var(--accent); font-size:12px; letter-spacing:.08em; line-height:1.6; }
+/* ===== COLLECTOR REVIEWS CSS ===== */
+.collector-reviews { display:grid; gap:52px; }
+.collector-review { display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr); align-items:center; gap:clamp(28px,5vw,75px); border-bottom:1px solid var(--line); padding-bottom:52px; }
+.collector-review:nth-child(even) .review-artwork { order:2; }
+.review-artwork { margin:0; }
+.review-artwork img { width:100%; max-height:620px; object-fit:contain; }
+.review-artwork figcaption { color:var(--muted); font-size:11px; text-transform:uppercase; letter-spacing:.16em; padding-top:14px; }
+.review-copy blockquote,.collector-general blockquote { margin:20px 0 0; }
+.review-copy p,.collector-general p { font-size:clamp(16px,1.5vw,19px); line-height:1.85; margin:0 0 24px; }
+.collector-general { max-width:880px; margin:20px auto 0; padding:clamp(25px,5vw,60px); background:var(--surface); }
+/* ===== REVIEWS MOBILE CSS ===== */
+@media(max-width:760px) { .press-grid,.collector-review { grid-template-columns:1fr; } .collector-review:nth-child(even) .review-artwork { order:0; } .reviews-section { margin-bottom:65px; } .collector-reviews { gap:35px; } .collector-review { padding-bottom:35px; } }
