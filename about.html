@@ -10,18 +10,65 @@
 </head>
 <body class="about-page">
   <a class="skip-link" href="#main-content">Skip to artist information</a>
-  <header class="site-header">
-    <a class="wordmark" href="index.html" aria-label="Leigh Witherell, home">LEIGH <span>WITHERELL</span></a>
-    <nav class="main-nav" aria-label="Main navigation">
-      <a href="index.html#current-works">Current Works</a>
-      <a href="galleries.html">Galleries</a>
-      <!-- ===== INSTALLATIONS NAV LINK ===== -->
-      <a href="installations.html">Installations</a>
-      <!-- ===== INVISIBILITY PROJECT NAV LINK ===== -->
+  
+<!-- ===== NAVIGATION ===== -->
+<!-- Shared navigation for all public website pages -->
+
+<header class="site-header">
+
+  <!-- Website Logo -->
+  <a class="wordmark" href="index.html" aria-label="Leigh Witherell, home">
+    LEIGH <span>WITHERELL</span>
+  </a>
+
+  <!-- Mobile Navigation Toggle -->
+  <details class="mobile-nav">
+    <summary>Menu <span aria-hidden="true">☰</span></summary>
+
+    <!-- Mobile Navigation Links -->
+    <nav aria-label="Mobile navigation">
+      <a href="index.html">Home</a>
+      <details class="nav-dropdown">
+        <summary>Works</summary>
+        <div class="dropdown-content">
+          <a href="index.html#current-works">Current Works</a>
+          <a href="galleries.html">Galleries</a>
+          <a href="installations.html">Installations</a>
+        </div>
+      </details>
+      <a href="reviews.html">Reviews</a>
+      <a href="commissions.html">Commissions</a>
+      <a href="collect-art.html">Collect Art</a>
       <a href="invisibility-project.html">Invisibility Project</a>
-      <a class="active" href="about.html#about" aria-current="page">About / CV / Press</a>
+      <a href="about.html#about">About</a>
     </nav>
-  </header>
+  </details>
+
+  <!-- Desktop Navigation -->
+  <nav class="main-nav" aria-label="Main navigation">
+
+    <a href="index.html">Home</a>
+
+    <!-- Works Dropdown -->
+    <details class="nav-dropdown">
+      <summary>Works <span aria-hidden="true">⌄</span></summary>
+      <div class="dropdown-content">
+        <a href="index.html#current-works">Current Works</a>
+        <a href="galleries.html">Galleries</a>
+        <a href="installations.html">Installations</a>
+      </div>
+    </details>
+
+    <!-- Other Pages -->
+    <a href="reviews.html">Reviews</a>
+    <a href="commissions.html">Commissions</a>
+    <a href="collect-art.html">Collect Art</a>
+    <a href="invisibility-project.html">Invisibility Project</a>
+    <a href="about.html#about">About</a>
+
+  </nav>
+</header>
+
   <main id="main-content" class="about-main">
     <div class="about-page-intro">
       <span class="overline">THE ARTIST</span>
