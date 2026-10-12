@@ -340,3 +340,26 @@ img { max-width:100%; display:block; }
 .invisibility-support p { margin:0 auto; }
 /* ===== INVISIBILITY MOBILE CSS ===== */
 @media (max-width:760px) { .invisibility-feature { margin-bottom:65px; } .invisibility-story { grid-template-columns:1fr; padding:55px 0 65px; } .invisibility-reading { margin-bottom:40px; } .invisibility-painting figcaption { display:block; } }
+
+/* ===== COMMISSIONS PAGE CSS ===== */
+.commissions-main .collection-intro { max-width:920px; }
+.commissions-main .collection-intro p { max-width:760px; }
+.commission-cta,.commission-submit { display:inline-flex; align-items:center; justify-content:center; gap:20px; background:var(--accent); color:#151515; border:1px solid var(--accent); padding:17px 24px; text-decoration:none; font:600 12px/1.4 Arial,sans-serif; text-transform:uppercase; letter-spacing:.12em; cursor:pointer; transition:background .2s,color .2s; }
+.commission-cta { margin-top:24px; }
+.commission-cta:hover,.commission-submit:hover { background:transparent; color:var(--accent); }
+.commission-submit:disabled { opacity:.55; cursor:wait; }
+.commission-inquiry { border-top:1px solid var(--line); padding:75px 0 110px; scroll-margin-top:110px; display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1.15fr); gap:clamp(30px,7vw,110px); }
+.commission-inquiry-intro h2 { font:400 clamp(34px,4.5vw,60px)/1.18 Georgia,serif; margin:18px 0 25px; }
+.commission-inquiry-intro p { color:var(--muted); font-size:18px; line-height:1.8; }
+.commission-form-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:23px; }
+.commission-field { display:flex; flex-direction:column; gap:10px; }
+.commission-full { grid-column:1/-1; }
+.commission-field label { color:var(--text); font-size:12px; letter-spacing:.08em; }
+.commission-field input,.commission-field select,.commission-field textarea { width:100%; min-width:0; background:#202020; color:var(--text); border:1px solid #49413d; border-radius:0; padding:14px 15px; font:16px/1.5 Arial,sans-serif; }
+.commission-field textarea { resize:vertical; }
+.commission-field input:focus-visible,.commission-field select:focus-visible,.commission-field textarea:focus-visible,.commission-submit:focus-visible,.commission-cta:focus-visible { outline:2px solid var(--accent); outline-offset:3px; }
+.commission-form-note { color:var(--muted); font-size:12px; line-height:1.65; margin:18px 0; }
+.commission-form-status { color:var(--accent); line-height:1.6; }
+@media(max-width:900px) { .commission-inquiry { grid-template-columns:1fr; } }
+@media(max-width:540px) { .commission-form-grid { grid-template-columns:1fr; } }
+/* ===== END COMMISSIONS PAGE CSS ===== */
