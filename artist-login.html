@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <!-- ===== PAGE SETTINGS ===== -->
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex,nofollow">
+  <meta name="theme-color" content="#151515">
+  <title>Artist Login | Leigh Witherell</title>
+  <!-- ===== LOGIN STYLESHEETS ===== -->
+  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="artist-login.css">
+  <script src="artist-login.js" defer></script>
+</head>
+<body>
+  <!-- ===== ACCESSIBILITY SKIP LINK ===== -->
+  <a class="skip-link" href="#login-main">Skip to sign in</a>
+  <!-- ===== LOGIN HEADER ===== -->
+  <header class="login-header">
+    <a class="wordmark" href="index.html" aria-label="Leigh Witherell home">LEIGH <span>WITHERELL</span></a>
+    <a class="login-back" href="index.html">← Return to gallery</a>
+  </header>
+  <!-- ===== LOGIN FORM ===== -->
+  <main id="login-main" class="login-main">
+    <section class="login-panel" aria-labelledby="login-title">
+      <p class="login-eyebrow">ARTIST STUDIO · PRIVATE ACCESS</p>
+      <h1 id="login-title">Welcome back, Leigh.</h1>
+      <p class="login-description">Sign in to manage your gallery, artwork, press, and more.</p>
+      <form id="artist-login-form" novalidate>
+        <!-- ===== EMAIL FIELD ===== -->
+        <div class="login-field"><label for="login-email">Email address</label><input id="login-email" name="email" type="email" autocomplete="username" inputmode="email" placeholder="you@example.com" required></div>
+        <!-- ===== PASSWORD FIELD ===== -->
+        <div class="login-field"><div class="login-label-row"><label for="login-password">Password</label><button class="login-text-button" id="toggle-password" type="button" aria-controls="login-password" aria-pressed="false">Show password</button></div><input id="login-password" name="password" type="password" autocomplete="current-password" placeholder="Enter your password" required></div>
+        <!-- ===== LOGIN STATUS ===== -->
+        <p id="login-message" class="login-message" role="status" aria-live="polite"></p>
+        <button class="login-submit" type="submit">Sign in <span aria-hidden="true">→</span></button>
+      </form>
+      <!-- ===== PASSWORD RECOVERY PLACEHOLDER ===== -->
+      <button id="forgot-password" class="login-text-button login-forgot" type="button">Forgot your password?</button>
+      <!-- ===== AUTHENTICATION PREVIEW NOTICE ===== -->
+      <p class="login-notice"><strong>Preview mode:</strong> Authentication isn't connected yet. Sign-in and password reset will work after we configure Supabase.</p>
+    </section>
+  </main>
+  <!-- ===== LOGIN FOOTER ===== -->
+  <footer class="login-footer">© Leigh Witherell · Artist studio</footer>
+</body>
+</html>
