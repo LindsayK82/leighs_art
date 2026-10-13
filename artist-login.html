@@ -10,6 +10,9 @@
   <!-- ===== LOGIN STYLESHEETS ===== -->
   <link rel="stylesheet" href="style.css">
   <link rel="stylesheet" href="artist-login.css">
+  <!-- ===== SUPABASE AUTHENTICATION SCRIPTS ===== -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js" defer></script>
+  <script src="artist-auth.js" defer></script>
   <script src="artist-login.js" defer></script>
 </head>
 <body>
@@ -37,8 +40,8 @@
       </form>
       <!-- ===== PASSWORD RECOVERY PLACEHOLDER ===== -->
       <button id="forgot-password" class="login-text-button login-forgot" type="button">Forgot your password?</button>
-      <!-- ===== AUTHENTICATION PREVIEW NOTICE ===== -->
-      <p class="login-notice"><strong>Preview mode:</strong> Authentication isn't connected yet. Sign-in and password reset will work after we configure Supabase.</p>
+      <!-- ===== PRIVATE ACCESS NOTE ===== -->
+      <p class="login-notice">Private access for authorized studio accounts only.</p>
     </section>
   </main>
   <!-- ===== LOGIN FOOTER ===== -->
