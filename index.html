@@ -117,7 +117,7 @@
     <!-- The images below are from your supplied assets. Artwork details and prices await Leigh's confirmation. -->
     <section class="gallery-section" id="current-works" aria-labelledby="works-heading">
       <div class="section-heading"><h2 id="works-heading">Current Works</h2><span>SELECTED ARTWORK</span></div>
-      <div class="art-grid">
+      <div class="art-grid" id="featured-artwork-grid" aria-live="polite">
         <figure class="art-card art-card--wide">
           <img src="assets/images/slices_of_life/modern-venus-rising.webp" alt="Modern Venus Rising by Leigh Witherell" fetchpriority="high">
           <figcaption><span>Modern Venus Rising</span><small>Details &amp; price forthcoming</small></figcaption>
@@ -150,6 +150,10 @@
 
   <!-- ===== FOOTER ===== -->
   <footer class="site-footer"><span>© <span id="year">2026</span> Leigh Witherell. All rights reserved.</span><span>ART • CURIOSITY • CONNECTION</span></footer>
+  <!-- ===== SUPABASE PUBLIC HOMEPAGE ARTWORK ===== -->
+  <!-- The public publishable key is used only for RLS-protected reads. -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="homepage-artwork.js" defer></script>
   <!-- ===== FOOTER YEAR SCRIPT ===== -->
   <script>document.getElementById('year').textContent = new Date().getFullYear();</script>
 </body>
