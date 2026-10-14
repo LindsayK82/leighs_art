@@ -9,7 +9,7 @@
   <title>Installations | Leigh Witherell</title>
   <link rel="stylesheet" href="style.css">
 </head>
-<body>
+<body data-gallery-slug="installations">
   <!-- ===== SKIP LINK ===== -->
   <a class="skip-link" href="#main-content">Skip to exhibition photographs</a>
   <!-- ===== NAVIGATION ===== -->
@@ -190,5 +190,8 @@
   <footer class="site-footer"><span>© <span id="year">2026</span> Leigh Witherell. All rights reserved.</span><span>ART • CURIOSITY • CONNECTION</span></footer>
   <!-- ===== FOOTER YEAR SCRIPT ===== -->
   <script>document.getElementById('year').textContent = new Date().getFullYear();</script>
+  <!-- ===== DYNAMIC GALLERY ARTWORK — SUPABASE ===== -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="gallery-artwork.js" defer></script>
 </body>
 </html>
