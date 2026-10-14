@@ -7,3 +7,6 @@
 
 /* ===== CV, PRESS AND REVIEWS EDITOR CSS ===== */
 .admin-content-form{display:grid;gap:18px}.admin-content-form .admin-field textarea{width:100%;min-height:100px;box-sizing:border-box;resize:vertical}.admin-content-form .admin-field select{width:100%}.admin-content-form .admin-form-grid{align-items:start}.admin-content-subtitle{font:normal 23px Georgia,serif;margin:30px 0 15px}.admin-content-summary{min-width:0;flex:1}.admin-content-summary h3{overflow-wrap:anywhere}.admin-content-form .admin-inline{margin-top:4px}
+
+/* ===== LIVE ARTWORK MANAGER CSS ===== */
+.artwork-manager-form{display:grid;gap:14px}.artwork-manager-form textarea{min-height:90px}.artwork-manager-thumb{width:90px;height:90px;object-fit:contain;background:#171717}.artwork-manager-actions{display:flex;gap:8px;flex-wrap:wrap}.artwork-manager-status{min-height:1.5em}.artwork-manager-check{display:flex;align-items:center;gap:9px}.artwork-manager-check input{width:18px;height:18px}

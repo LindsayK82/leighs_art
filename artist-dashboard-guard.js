@@ -6,6 +6,12 @@
     window.location.replace('artist-login.html');
     return;
   }
+  /* ===== VERIFY SITE ADMIN MEMBERSHIP ===== */
+  const { data: admin, error: adminError } = await client.from('site_admins').select('user_id').eq('user_id', session.user.id).maybeSingle();
+  if (adminError || !admin) {
+    document.getElementById('auth-loading').textContent = 'This account does not have studio administrator access.';
+    return;
+  }
   /* ===== DISPLAY SIGNED-IN DASHBOARD ===== */
   document.getElementById('auth-loading').hidden = true;
   document.getElementById('protected-dashboard').hidden = false;
