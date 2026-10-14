@@ -42,7 +42,7 @@
     figure.append(image, caption);
     article.appendChild(figure);
 
-    if (art.description || art.is_sold || art.price != null) {
+    if (art.description || art.medium || art.dimensions || art.artwork_year || art.availability_label || art.price_label || art.is_sold || art.price != null) {
       const details = document.createElement('div');
       details.className = 'artwork-details';
       if (art.description) {
@@ -51,11 +51,29 @@
         description.textContent = art.description;
         details.appendChild(description);
       }
-      if (art.is_sold || art.price != null) {
-        const status = document.createElement('p');
-        status.textContent = art.is_sold ? 'Sold' : new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(art.price);
-        details.appendChild(status);
+      /* ===== ARTWORK SPECIFICATIONS — MATCH STATIC GALLERY HTML ===== */
+      const specs = document.createElement('dl');
+      specs.className = 'artwork-specs';
+      function addSpec(label, value) {
+        if (value === null || value === undefined || String(value).trim() === '') return;
+        const row = document.createElement('div');
+        const term = document.createElement('dt');
+        term.textContent = label;
+        const description = document.createElement('dd');
+        description.textContent = String(value);
+        row.append(term, description);
+        specs.appendChild(row);
       }
+      addSpec('Medium', art.medium);
+      addSpec('Dimensions', art.dimensions);
+      addSpec('Year', art.artwork_year);
+      /* ===== PRICE AND AVAILABILITY — PRESERVE ARTIST WORDING ===== */
+      const priceText = art.price_label || (art.is_sold ? 'SOLD' : art.price != null
+        ? new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(art.price)
+        : null);
+      addSpec('Price', priceText);
+      addSpec('Availability', art.availability_label);
+      if (specs.children.length) details.appendChild(specs);
       article.appendChild(details);
     }
     return article;
@@ -65,7 +83,7 @@
   async function loadGalleryArtwork() {
     try {
       const { data, error } = await client.from('artworks')
-        .select('id,title,description,image_path,alt_text,price,is_sold,display_order,created_at,galleries!inner(slug,is_visible)')
+        .select('id,title,description,image_path,alt_text,price,is_sold,medium,dimensions,artwork_year,availability_label,price_label,display_order,created_at,galleries!inner(slug,is_visible)')
         .eq('is_visible', true)
         .eq('galleries.slug', gallerySlug)
         .eq('galleries.is_visible', true)

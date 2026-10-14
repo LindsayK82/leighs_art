@@ -29,7 +29,14 @@ async function renderLiveArtwork(target) {
       <label class="admin-field">Gallery<select class="admin-control" name="gallery_id" required><option value="">Choose a gallery</option>${artworkGalleries.map(g=>`<option value="${g.id}">${artworkEscape(g.name)}</option>`).join('')}</select></label>
       <label class="admin-field">Image (JPG, PNG, or WebP)<input class="admin-control" type="file" name="image" accept="image/jpeg,image/png,image/webp"></label>
       <label class="admin-field">Image description for accessibility<input class="admin-control" name="alt_text" maxlength="300"></label>
-      <label class="admin-field">Price in USD (optional)<input class="admin-control" type="number" name="price" min="0" step="0.01"></label>
+      <!-- ===== ARTWORK CATALOG DETAILS ===== -->
+      <label class="admin-field">Medium / materials<input class="admin-control" name="medium" maxlength="500" placeholder="e.g., Acrylics on Cotton Canvas"></label>
+      <label class="admin-field">Dimensions<input class="admin-control" name="dimensions" maxlength="200" placeholder="e.g., 20 x 20 inches"></label>
+      <label class="admin-field">Year<input class="admin-control" name="artwork_year" maxlength="100" placeholder="e.g., 2023"></label>
+      <label class="admin-field">Availability wording<input class="admin-control" name="availability_label" maxlength="300" placeholder="e.g., Available, Not for sale, Limited-edition prints"></label>
+      <label class="admin-field">Price wording (as displayed)<input class="admin-control" name="price_label" maxlength="300" placeholder="e.g., $3,100 or SOLD"></label>
+      <!-- ===== OPTIONAL STRUCTURED SALES DATA ===== -->
+      <label class="admin-field">Price in USD (numeric, optional)<input class="admin-control" type="number" name="price" min="0" step="0.01"></label>
       <label class="artwork-manager-check"><input type="checkbox" name="is_featured"> Feature on Home Page</label>
       <label class="artwork-manager-check"><input type="checkbox" name="is_visible" checked> Visible on website</label>
       <label class="artwork-manager-check"><input type="checkbox" name="is_sold"> Mark as sold</label>
@@ -37,7 +44,7 @@ async function renderLiveArtwork(target) {
     </form></div>
     <!-- ===== EXISTING ARTWORK CONTROLS ===== -->
     <h3 class="admin-content-subtitle">Gallery artwork (${artworkRows.length})</h3>
-    <p class="admin-muted">Unchecking Featured removes artwork from the homepage without deleting it from its gallery. The public website will display these changes after we connect its pages in Stage Three.</p>
+    <p class="admin-muted">Unchecking Featured removes artwork from the homepage without deleting it from its gallery. The connected public homepage and galleries reflect visibility and featured changes on refresh.</p>
     <div class="admin-list">${artworkRows.map(a=>{const gallery=artworkGalleries.find(g=>g.id===a.gallery_id);const url=artworkClient.storage.from(artworkBucket).getPublicUrl(a.image_path).data.publicUrl;return `<article class="admin-row"><img class="artwork-manager-thumb" src="${artworkEscape(url)}" alt="${artworkEscape(a.alt_text || a.title)}"><div><h3>${artworkEscape(a.title)}</h3><p class="admin-muted">${artworkEscape(gallery?.name || 'Unassigned')} · ${a.is_visible?'Visible':'Hidden'} · ${a.is_featured?'Featured':'Not featured'}</p></div><div class="artwork-manager-actions"><button class="admin-button secondary" type="button" data-feature-art="${a.id}">${a.is_featured?'Remove from homepage':'Feature on homepage'}</button><button class="admin-button secondary" type="button" data-edit-art="${a.id}">Edit</button><button class="admin-button secondary" type="button" data-delete-art="${a.id}">Delete</button></div></article>`}).join('') || '<p class="admin-muted">No artwork uploaded yet.</p>'}</div>
     <p id="artwork-manager-status" class="admin-notice artwork-manager-status" role="status" aria-live="polite"></p>`;
   document.getElementById('live-artwork-form').addEventListener('submit', saveLiveArtwork);
@@ -66,7 +73,7 @@ async function saveLiveArtwork(event) {
       if (uploaded.error) throw uploaded.error;
     }
     const priceValue=form.elements.price.value.trim();
-    const record={title:form.elements.title.value.trim(),description:form.elements.description.value.trim()||null,gallery_id:form.elements.gallery_id.value,image_path:newPath||previous?.image_path,alt_text:form.elements.alt_text.value.trim()||null,price:priceValue===''?null:Number(priceValue),is_featured:form.elements.is_featured.checked,is_visible:form.elements.is_visible.checked,is_sold:form.elements.is_sold.checked,updated_at:new Date().toISOString()};
+    const record={title:form.elements.title.value.trim(),description:form.elements.description.value.trim()||null,gallery_id:form.elements.gallery_id.value,image_path:newPath||previous?.image_path,alt_text:form.elements.alt_text.value.trim()||null,price:priceValue===''?null:Number(priceValue),medium:form.elements.medium.value.trim()||null,dimensions:form.elements.dimensions.value.trim()||null,artwork_year:form.elements.artwork_year.value.trim()||null,availability_label:form.elements.availability_label.value.trim()||null,price_label:form.elements.price_label.value.trim()||null,is_featured:form.elements.is_featured.checked,is_visible:form.elements.is_visible.checked,is_sold:form.elements.is_sold.checked,updated_at:new Date().toISOString()};
     const result=previous?await artworkClient.from('artworks').update(record).eq('id',id).select('id'):await artworkClient.from('artworks').insert(record).select('id');
     if(result.error) throw result.error;
     if(previous && newPath) {const removed=await artworkClient.storage.from(artworkBucket).remove([previous.image_path]);if(removed.error) console.warn('Old image cleanup failed:',removed.error);}
@@ -82,7 +89,7 @@ async function saveLiveArtwork(event) {
 function editLiveArtwork(id) {
   const a=artworkRows.find(row=>row.id===id);if(!a)return;
   const f=document.getElementById('live-artwork-form');
-  for(const key of ['title','description','gallery_id','alt_text','price'])f.elements[key].value=a[key]??'';
+  for(const key of ['title','description','gallery_id','alt_text','price','medium','dimensions','artwork_year','availability_label','price_label'])f.elements[key].value=a[key]??'';
   for(const key of ['is_featured','is_visible','is_sold'])f.elements[key].checked=!!a[key];
   f.elements.artworkId.value=a.id;
   document.getElementById('artwork-form-heading').textContent='Edit artwork';
