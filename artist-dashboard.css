@@ -10,3 +10,8 @@
 
 /* ===== LIVE ARTWORK MANAGER CSS ===== */
 .artwork-manager-form{display:grid;gap:14px}.artwork-manager-form textarea{min-height:90px}.artwork-manager-thumb{width:90px;height:90px;object-fit:contain;background:#171717}.artwork-manager-actions{display:flex;gap:8px;flex-wrap:wrap}.artwork-manager-status{min-height:1.5em}.artwork-manager-check{display:flex;align-items:center;gap:9px}.artwork-manager-check input{width:18px;height:18px}
+
+/* ===== STICKY DASHBOARD HEADER / NAVIGATION ===== */
+.admin-header { position: sticky; top: 0; z-index: 110; max-width: none; background: var(--bg, #151515); box-sizing: border-box; }
+/* ===== STICKY DASHBOARD MOBILE ===== */
+@media (max-width: 540px) { .admin-header { padding: 12px 5%; gap: 8px; } .admin-header-right { gap: 10px; } .admin-preview-tag { padding: 5px 8px; } }
