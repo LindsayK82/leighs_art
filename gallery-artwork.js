@@ -1,5 +1,5 @@
 /* ===== DYNAMIC GALLERY ARTWORK — SUPABASE ===== */
-/* Adds dashboard-uploaded work while preserving the existing HTML collection. */
+/* Loads Supabase-managed galleries; preserves static artwork in galleries not yet migrated. */
 (() => {
   'use strict';
 
@@ -7,7 +7,7 @@
   const gallerySlug = document.body.dataset.gallerySlug;
   const isInstallations = gallerySlug === 'installations';
   const grid = document.querySelector(isInstallations ? '.installations-grid' : '.collection-grid');
-  const isMigratedGallery = gallerySlug === 'melancholy';
+  const isMigratedGallery = ['melancholy', 'slices-of-life', 'sensuality'].includes(gallerySlug);
   if (!gallerySlug || !grid || !window.supabase) return;
 
   /* ===== PUBLIC SUPABASE CLIENT ===== */
@@ -93,6 +93,7 @@
       if (error) throw error;
       /* ===== REMOVE PREVIOUSLY RENDERED SUPABASE ARTWORK ===== */
       grid.querySelectorAll('[data-supabase-artwork]').forEach(node => node.remove());
+      if (isMigratedGallery) grid.querySelectorAll('.gallery-empty-message').forEach(node => node.remove());
       /* ===== CLEAR LOADING MESSAGE FOR MIGRATED GALLERY ===== */
       if (isMigratedGallery) grid.querySelector('.gallery-loading')?.remove();
       for (const artwork of data || []) {
@@ -103,6 +104,7 @@
       /* ===== EMPTY GALLERY MESSAGE ===== */
       if (isMigratedGallery && !(data || []).length) {
         const message = document.createElement('p');
+        message.className = 'gallery-empty-message';
         message.textContent = 'No artwork is currently available in this collection.';
         grid.appendChild(message);
       }
