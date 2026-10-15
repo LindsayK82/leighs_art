@@ -7,6 +7,7 @@
   const gallerySlug = document.body.dataset.gallerySlug;
   const isInstallations = gallerySlug === 'installations';
   const grid = document.querySelector(isInstallations ? '.installations-grid' : '.collection-grid');
+  const isMigratedGallery = gallerySlug === 'melancholy';
   if (!gallerySlug || !grid || !window.supabase) return;
 
   /* ===== PUBLIC SUPABASE CLIENT ===== */
@@ -90,15 +91,27 @@
         .order('display_order', { ascending: true })
         .order('created_at', { ascending: true });
       if (error) throw error;
-      /* ===== PRESERVE STATIC ARTWORK DURING MIGRATION ===== */
+      /* ===== REMOVE PREVIOUSLY RENDERED SUPABASE ARTWORK ===== */
       grid.querySelectorAll('[data-supabase-artwork]').forEach(node => node.remove());
+      /* ===== CLEAR LOADING MESSAGE FOR MIGRATED GALLERY ===== */
+      if (isMigratedGallery) grid.querySelector('.gallery-loading')?.remove();
       for (const artwork of data || []) {
         const card = makeArtwork(artwork);
         card.dataset.supabaseArtwork = artwork.id;
         grid.appendChild(card);
       }
+      /* ===== EMPTY GALLERY MESSAGE ===== */
+      if (isMigratedGallery && !(data || []).length) {
+        const message = document.createElement('p');
+        message.textContent = 'No artwork is currently available in this collection.';
+        grid.appendChild(message);
+      }
     } catch (error) {
       /* ===== FAIL SAFELY — KEEP EXISTING GALLERY ===== */
+      if (isMigratedGallery) {
+        const message = grid.querySelector('.gallery-loading');
+        if (message) message.textContent = 'Artwork could not be loaded right now. Please try again shortly.';
+      }
       console.error(`Could not load ${gallerySlug} artwork:`, error);
     }
   }
