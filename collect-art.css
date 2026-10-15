@@ -14,3 +14,6 @@
 .cart-panel{border-left:1px solid #6c594c}.cart-panel .cart-top{margin-bottom:18px}
 @media(max-width:570px){.floating-cart{right:14px;bottom:14px;padding:11px 14px}.cart-toast{right:14px;bottom:80px}.cart-panel{padding:20px}}
 @media(prefers-reduced-motion:reduce){.floating-cart{transition:none}}
+
+/* ===== STORE CATEGORY TABS ===== */
+.collect-tabs{display:flex;gap:12px;flex-wrap:wrap;margin:0 0 30px}.collect-tabs .active{background:#c9a98f;color:#151515}.collect-product .original-price{font-size:1.1rem;color:#f3eee8}.collect-product .print-size{max-width:100%}#store-status{color:#c8a58c}#store-status:empty{display:none}

@@ -1,104 +1,104 @@
-/* ===== COLLECT ART PRODUCT CATALOG ===== */
-const PRODUCTS = [{"id": 0, "title": "Blue Street in Afternoon Light", "image": "assets/images/slices_of_life/blue-street-in-afternoon-light.png"}, {"id": 1, "title": "The Secret Before Spring", "image": "assets/images/slices_of_life/the-secret-before-spring.jpg"}, {"id": 2, "title": "Margo in Conversation", "image": "assets/images/slices_of_life/margo-in-conversation.jpg"}, {"id": 3, "title": "Where Ivy Climbs and Love Resides", "image": "assets/images/slices_of_life/where-ivy-climbs-and-love-resides.webp"}, {"id": 4, "title": "Brother and Sister on a Blossomed Path", "image": "assets/images/slices_of_life/brother-and-sister-on-a-blossomed-path.jpg"}, {"id": 5, "title": "Modern Apollo Against a Village Coastline", "image": "assets/images/slices_of_life/modern-apollo-against-a-village-shoreline.webp"}, {"id": 6, "title": "Modern Venus Rising", "image": "assets/images/slices_of_life/modern-venus-rising.webp"}, {"id": 7, "title": "Venus in Repose", "image": "assets/images/slices_of_life/venus-in-repose.webp"}, {"id": 8, "title": "The Archivist", "image": "assets/images/slices_of_life/the-archivist.webp"}, {"id": 9, "title": "The Lover’s Kiss", "image": "assets/images/reviews/the-lovers-kiss.webp"}, {"id": 10, "title": "The Bath", "image": "assets/images/sensuality/the-bath.webp"}, {"id": 11, "title": "God Needs the Devil — Image 1", "image": "assets/images/sensuality/gntd-image-one.webp"}, {"id": 12, "title": "God Needs the Devil — Image 2", "image": "assets/images/sensuality/gntd-image-two.webp"}, {"id": 13, "title": "God Needs the Devil — Image 3", "image": "assets/images/sensuality/gntd-image-three.jpg"}, {"id": 14, "title": "Tell Me How — Image 1", "image": "assets/images/sensuality/tmh-image-one.webp"}, {"id": 15, "title": "Tell Me How — Image 2", "image": "assets/images/sensuality/tmh-image-two.webp"}, {"id": 16, "title": "Tell Me How — Image 3", "image": "assets/images/sensuality/tmh-image-three.webp"}, {"id": 17, "title": "Tell Me How — Image 4", "image": "assets/images/sensuality/tmh-image-four.webp"}, {"id": 18, "title": "Tell Me How — Image 5", "image": "assets/images/slices_of_life/tell-me-how-image-five.webp"}, {"id": 19, "title": "Tell Me How — Image 6", "image": "assets/images/sensuality/tmh-image-six.webp"}, {"id": 20, "title": "Tell Me How — Image 7", "image": "assets/images/sensuality/tmh-image-seven.webp"}, {"id": 21, "title": "Tell Me How — Image 8", "image": "assets/images/sensuality/tmh-image-eight.webp"}, {"id": 22, "title": "Tell Me How — Image 10", "image": "assets/images/sensuality/tmh-image-ten.webp"}, {"id": 23, "title": "Alli", "image": "assets/images/melancholy/alli.webp"}, {"id": 24, "title": "Hidden Wounds", "image": "assets/images/sensuality/hidden-wounds.webp"}, {"id": 25, "title": "The Artist’s Self-Reflection", "image": "assets/images/melancholy/the-artist.webp"}, {"id": 26, "title": "Jim", "image": "assets/images/melancholy/jim.webp"}, {"id": 27, "title": "Eric", "image": "assets/images/melancholy/eric.webp"}, {"id": 28, "title": "Freedom", "image": "assets/images/commissions/freedom.webp"}];
-/* ===== PRINT PRICES — EDIT HERE ===== */
-const SIZES = [{label:'10″ × 10″',price:250},{label:'12″ × 12″',price:300},{label:'14″ × 14″',price:350},{label:'16″ × 16″',price:400},{label:'18″ × 18″',price:450},{label:'20″ × 20″',price:500}];
-/* ===== CART STORAGE AND EDITION RULES ===== */
-// Each artwork/size combination is a separate edition of ten. These are
-// browser-side limits only, NOT verified stock or assigned COA numbers.
-const EDITION_SIZE = 10;
-const STORAGE_KEY = 'leigh-collect-cart-v1';
-function loadCart() {
-  try {
-    const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
-    if (!Array.isArray(saved)) return [];
-    const result = [];
-    for (const item of saved.slice(0, 300)) {
-      const product = PRODUCTS.find(p => p.id === item.id);
-      const size = SIZES.find(s => s.label === item.size);
-      if (product && size && result.filter(i => i.id === product.id && i.size === size.label).length < EDITION_SIZE) {
-        result.push({id:product.id,title:product.title,size:size.label,price:size.price});
-      }
-    }
-    return result;
-  } catch { return []; }
+/* ===== SUPABASE PUBLIC STORE CONNECTION ===== */
+(() => {
+'use strict';
+const grid = document.getElementById('collect-grid');
+const status = document.getElementById('store-status');
+const search = document.getElementById('art-search');
+const money = n => new Intl.NumberFormat('en-US',{style:'currency',currency:'USD'}).format(n);
+const sizes = ['10 × 10','12 × 12','14 × 14','16 × 16','18 × 18','20 × 20'];
+const CART_KEY='leigh-collect-cart-v2';
+const MAX_PREVIEW_PER_SIZE=10;
+let products=[], category='prints', cart=[], previousFocus=null,toastTimer;
+const client=window.supabase?.createClient('https://hqkcqvxppoboryqcwksi.supabase.co','sb_publishable_ePeAQ5b-9vFZkOVmOMHLzA_zhLGbaOB',{auth:{persistSession:false,autoRefreshToken:false,detectSessionInUrl:false}});
+
+/* ===== SAFE PUBLIC PRODUCT ELIGIBILITY ===== */
+function availableOriginal(a){
+  const availability=String(a.availability_label||'').trim().toLowerCase();
+  return a.is_visible===true && a.is_sold===false && ['available','available for sale','for sale'].includes(availability) && Number.isFinite(Number(a.price)) && Number(a.price)>0;
 }
-const CART = loadCart();
-function saveCart() { try { localStorage.setItem(STORAGE_KEY, JSON.stringify(CART)); } catch {} }
-const money = n => new Intl.NumberFormat('en-US',{style:'currency',currency:'USD',maximumFractionDigits:0}).format(n);
-let toastTimer;
-function notifyCart(message) {
-  const toast = document.getElementById('cart-toast');
-  toast.textContent = message; toast.hidden = false;
-  clearTimeout(toastTimer);
-  toastTimer = setTimeout(() => { toast.hidden = true; }, 2600);
+function printOptions(a){return (a.printOptions||[]).filter(p=>sizes.includes(p.size_inches)&&Number.isFinite(Number(p.price_usd))&&Number(p.price_usd)>0).sort((x,y)=>sizes.indexOf(x.size_inches)-sizes.indexOf(y.size_inches));}
+function eligible(a,kind){return kind==='print' ? a.is_visible===true && printOptions(a).length>0 : availableOriginal(a);}
+function productImage(a){return client.storage.from('artwork-images').getPublicUrl(a.image_path).data.publicUrl;}
+function getOffer(item){
+ const a=products.find(p=>p.id===item.id);
+ if(!a || !eligible(a,item.kind))return null;
+ if(item.kind==='original')return {...item,title:a.title,price:Number(a.price),size:'Original canvas'};
+ const option=printOptions(a).find(o=>o.size_inches===item.size);
+ return option?{...item,title:a.title,price:Number(option.price_usd)}:null;
 }
-/* ===== PRINT GALLERY ===== */
-function renderProducts(query='') {
-  const grid = document.getElementById('collect-grid');
-  grid.replaceChildren();
-  PRODUCTS.filter(p => p.title.toLowerCase().includes(query.toLowerCase())).forEach(p => {
-    const article = document.createElement('article'); article.className='collect-product';
-    const img = document.createElement('img'); img.src=p.image; img.alt=p.title+' by Leigh Witherell'; img.loading='lazy';
-    const title = document.createElement('h3'); title.textContent=p.title;
-    const info = document.createElement('p'); info.textContent='Giclée print · Edition of 10 per size';
-    const label = document.createElement('label'); label.textContent='Choose print size';
-    const select = document.createElement('select'); select.className='print-size';
-    const selectId='print-size-'+p.id; select.id=selectId; label.htmlFor=selectId;
-    SIZES.forEach((s,i) => { const opt=document.createElement('option'); opt.value=i; opt.textContent=s.label+' — '+money(s.price); select.append(opt); });
-    const btn = document.createElement('button'); btn.className='collect-button'; btn.textContent='Add to cart';
-    btn.addEventListener('click', () => {
-      const size=SIZES[Number(select.value)];
-      const count=CART.filter(i=>i.id===p.id && i.size===size.label).length;
-      if(count>=EDITION_SIZE){ notifyCart('Maximum of 10 for this artwork and size in the preview.'); return; }
-      CART.push({id:p.id,title:p.title,size:size.label,price:size.price});
-      renderCart(); notifyCart(p.title+' added to cart');
-    });
-    article.append(img,title,info,label,select,btn); grid.append(article);
-  });
+/* ===== CART VALIDATION AGAINST CURRENT CATALOG ===== */
+function restoreCart(){
+ let stored=[];try{stored=JSON.parse(localStorage.getItem(CART_KEY)||'[]');}catch{}
+ if(!Array.isArray(stored))stored=[];
+ const result=[];
+ for(const entry of stored.slice(0,100)){
+   if(!entry || typeof entry.id!=='string' || !['print','original'].includes(entry.kind))continue;
+   const item=getOffer({id:entry.id,kind:entry.kind,size:entry.size});if(!item)continue;
+   const count=result.filter(x=>x.id===item.id&&x.kind===item.kind&&x.size===item.size).length;
+   if(item.kind==='original' && result.some(x=>x.id===item.id&&x.kind==='original'))continue;
+   if(item.kind==='print' && count>=MAX_PREVIEW_PER_SIZE)continue;
+   result.push(item);
+ }
+ cart=result;renderCart();
 }
-/* ===== CART DISPLAY ===== */
-function renderCart() {
-  const el=document.getElementById('cart-items'); el.replaceChildren();
-  CART.forEach((item,i) => {
-    const line=document.createElement('div'); line.className='cart-line';
-    const info=document.createElement('span'); info.textContent=item.title+' · '+item.size+' · '+money(item.price);
-    const remove=document.createElement('button'); remove.type='button'; remove.textContent='Remove';
-    remove.setAttribute('aria-label','Remove '+item.title+' '+item.size);
-    remove.addEventListener('click',()=>{CART.splice(i,1);renderCart();notifyCart('Item removed from cart');});
-    line.append(info,remove);el.append(line);
-  });
-  if(!CART.length)el.textContent='Your cart is empty.';
-  const count=CART.length;
-  document.getElementById('cart-count').textContent=count;
-  document.getElementById('floating-cart-count').textContent=count;
-  document.getElementById('floating-cart').setAttribute('aria-label','Open shopping cart, '+count+' items');
-  document.getElementById('cart-total').textContent=money(CART.reduce((sum,p)=>sum+p.price,0));
-  saveCart();
+function notify(message){const toast=document.getElementById('cart-toast');toast.textContent=message;toast.hidden=false;clearTimeout(toastTimer);toastTimer=setTimeout(()=>toast.hidden=true,2600);}
+function addCart(a,kind,size){
+ const item=getOffer({id:a.id,kind,size});if(!item)return notify('This option is not available.');
+ const count=cart.filter(x=>x.id===item.id&&x.kind===kind&&x.size===item.size).length;
+ if(kind==='original'&&count)return notify('This original is already in your cart.');
+ if(kind==='print'&&count>=MAX_PREVIEW_PER_SIZE)return notify('Preview limit reached for this print size.');
+ cart.push(item);renderCart();notify(a.title+' added to cart');
 }
-/* ===== FLOATING CART AND DRAWER CONTROLS ===== */
-let previousFocus=null;
-function showCart(show) {
-  const panel=document.getElementById('cart-panel');
-  if(show){ previousFocus=document.activeElement; panel.hidden=false; document.getElementById('cart-close').focus(); }
-  else {panel.hidden=true; if(previousFocus && typeof previousFocus.focus==='function') previousFocus.focus();}
-  document.getElementById('cart-toggle').setAttribute('aria-expanded',String(show));
-  document.getElementById('floating-cart').setAttribute('aria-expanded',String(show));
-  document.body.classList.toggle('cart-open',show);
-}
-document.getElementById('cart-toggle').addEventListener('click',()=>showCart(true));
-document.getElementById('floating-cart').addEventListener('click',()=>showCart(true));
-document.getElementById('cart-close').addEventListener('click',()=>showCart(false));
-document.addEventListener('keydown',e=>{
-  const panel=document.getElementById('cart-panel');
-  if(panel.hidden)return;
-  if(e.key==='Escape'){showCart(false);return;}
-  if(e.key==='Tab'){
-    const focusable=[...panel.querySelectorAll('button:not([disabled]), a[href], input:not([disabled])')];
-    if(!focusable.length)return;
-    const first=focusable[0],last=focusable[focusable.length-1];
-    if(e.shiftKey && document.activeElement===first){e.preventDefault();last.focus();}
-    else if(!e.shiftKey && document.activeElement===last){e.preventDefault();first.focus();}
+/* ===== PRINTS AND ORIGINALS TABS ===== */
+function renderProducts(){
+ grid.replaceChildren();const q=search.value.trim().toLowerCase();
+ const matches=products.filter(a=>eligible(a,category==='prints'?'print':'original') && a.title.toLowerCase().includes(q));
+ status.textContent=matches.length?'':q?'No matching artwork found.':category==='prints'?'No prints are priced yet.':'No original canvases are currently listed for sale.';
+ for(const a of matches){
+  const card=document.createElement('article');card.className='collect-product';
+  const img=document.createElement('img');img.src=productImage(a);img.alt=a.alt_text||a.title+' by Leigh Witherell';img.loading='lazy';
+  const title=document.createElement('h3');title.textContent=a.title;
+  const desc=document.createElement('p');desc.textContent=category==='prints'?'Giclée print · edition availability to be confirmed':'Original canvas · '+(a.dimensions||'One-of-a-kind artwork');
+  card.append(img,title,desc);
+  if(category==='prints'){
+   const label=document.createElement('label');label.textContent='Choose print size';
+   const select=document.createElement('select');select.className='print-size';select.id='size-'+a.id;label.htmlFor=select.id;
+   for(const option of printOptions(a)){const opt=document.createElement('option');opt.value=option.size_inches;opt.textContent=option.size_inches+' in — '+money(Number(option.price_usd));select.append(opt);}
+   const button=document.createElement('button');button.type='button';button.className='collect-button';button.textContent='Add print to cart';button.addEventListener('click',()=>addCart(a,'print',select.value));
+   card.append(label,select,button);
+  }else{
+   const price=document.createElement('p');price.className='original-price';price.textContent=money(Number(a.price));
+   const button=document.createElement('button');button.type='button';button.className='collect-button';button.textContent='Add original to cart';button.addEventListener('click',()=>addCart(a,'original','Original canvas'));
+   card.append(price,button);
   }
-});
-document.getElementById('art-search').addEventListener('input',e=>renderProducts(e.target.value));
-renderProducts(); renderCart();
+  grid.append(card);
+ }
+}
+function switchCategory(next){category=next;for(const kind of ['prints','originals']){const btn=document.getElementById('tab-'+kind);btn.classList.toggle('active',kind===next);btn.setAttribute('aria-pressed',String(kind===next));}document.getElementById('store-title').textContent=next==='prints'?'Fine Art Prints':'Original Canvases';document.getElementById('store-subtitle').textContent=next==='prints'?'Only sizes priced by the artist are available. Edition availability will be verified before checkout launches.':'Only original canvases marked available for sale are listed here.';renderProducts();}
+/* ===== CART DISPLAY — PREVIEW ONLY, NO CHECKOUT ===== */
+function renderCart(){
+ const box=document.getElementById('cart-items');box.replaceChildren();
+ cart.forEach((item,index)=>{const line=document.createElement('div');line.className='cart-line';const label=document.createElement('span');label.textContent=item.title+' · '+(item.kind==='original'?'Original canvas':item.size+' in print')+' · '+money(item.price);const remove=document.createElement('button');remove.type='button';remove.textContent='Remove';remove.setAttribute('aria-label','Remove '+item.title);remove.addEventListener('click',()=>{cart.splice(index,1);renderCart();notify('Item removed');});line.append(label,remove);box.append(line);});
+ if(!cart.length)box.textContent='Your cart is empty.';
+ document.getElementById('cart-count').textContent=cart.length;document.getElementById('floating-cart-count').textContent=cart.length;document.getElementById('floating-cart').setAttribute('aria-label','Open shopping cart, '+cart.length+' items');document.getElementById('cart-total').textContent=money(cart.reduce((sum,x)=>sum+x.price,0));
+ try{localStorage.setItem(CART_KEY,JSON.stringify(cart.map(({id,kind,size})=>({id,kind,size}))));}catch{}
+}
+/* ===== CART DRAWER CONTROLS ===== */
+function showCart(show){const panel=document.getElementById('cart-panel');if(show){previousFocus=document.activeElement;panel.hidden=false;document.getElementById('cart-close').focus();}else{panel.hidden=true;previousFocus?.focus?.();}document.getElementById('cart-toggle').setAttribute('aria-expanded',String(show));document.getElementById('floating-cart').setAttribute('aria-expanded',String(show));document.body.classList.toggle('cart-open',show);}
+document.getElementById('cart-toggle').addEventListener('click',()=>showCart(true));document.getElementById('floating-cart').addEventListener('click',()=>showCart(true));document.getElementById('cart-close').addEventListener('click',()=>showCart(false));
+document.addEventListener('keydown',e=>{const panel=document.getElementById('cart-panel');if(panel.hidden)return;if(e.key==='Escape'){showCart(false);return;}if(e.key==='Tab'){const focusable=[...panel.querySelectorAll('button:not([disabled]),a[href],input:not([disabled])')];if(!focusable.length)return;const first=focusable[0],last=focusable[focusable.length-1];if(e.shiftKey&&document.activeElement===first){e.preventDefault();last.focus();}else if(!e.shiftKey&&document.activeElement===last){e.preventDefault();first.focus();}}});
+for(const kind of ['prints','originals'])document.getElementById('tab-'+kind).addEventListener('click',()=>switchCategory(kind));
+search.addEventListener('input',renderProducts);
+/* ===== FETCH LIVE ARTWORK AND PRINT PRICES ===== */
+async function init(){
+ if(!client){status.textContent='Store could not initialize. Please try again later.';return;}
+ try{
+  const [art,prices]=await Promise.all([client.from('artworks').select('id,title,image_path,alt_text,dimensions,price,is_sold,is_visible,availability_label').eq('is_visible',true),client.from('artwork_print_prices').select('artwork_id,size_inches,price_usd')]);
+  if(art.error)throw art.error;if(prices.error)throw prices.error;
+  const byArtwork=new Map();for(const row of prices.data||[]){if(!byArtwork.has(row.artwork_id))byArtwork.set(row.artwork_id,[]);byArtwork.get(row.artwork_id).push(row);}
+  products=(art.data||[]).filter(a=>a.image_path).map(a=>({...a,printOptions:byArtwork.get(a.id)||[]}));
+  restoreCart();renderProducts();
+ }catch(err){status.textContent='Artwork is temporarily unavailable. Please try again later.';console.error('Collect Art load error:',err);}
+}
+init();
+})();
