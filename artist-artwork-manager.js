@@ -42,11 +42,37 @@ async function renderLiveArtwork(target) {
       <label class="artwork-manager-check"><input type="checkbox" name="is_sold"> Mark as sold</label>
       <div class="admin-inline"><button class="admin-button" type="submit" id="save-live-artwork">Save artwork</button><button class="admin-button secondary" type="button" id="cancel-live-artwork" hidden>Cancel editing</button></div>
     </form></div>
+    <!-- ===== LIVE ARTWORK SEARCH AND GALLERY FILTER ===== -->
+    <div class="admin-panel"><div class="admin-inline">
+      <label class="admin-field">Find a painting<input class="admin-control" id="live-artwork-search" type="search" placeholder="Search title, description, medium or year"></label>
+      <label class="admin-field">Filter by gallery<select class="admin-control" id="live-artwork-gallery"><option value="">All galleries</option>${artworkGalleries.map(g=>`<option value="${artworkEscape(g.id)}">${artworkEscape(g.name)}</option>`).join('')}</select></label>
+    </div><p class="admin-muted" id="live-artwork-count" role="status"></p></div>
     <!-- ===== EXISTING ARTWORK CONTROLS ===== -->
     <h3 class="admin-content-subtitle">Gallery artwork (${artworkRows.length})</h3>
     <p class="admin-muted">Unchecking Featured removes artwork from the homepage without deleting it from its gallery. The connected public homepage and galleries reflect visibility and featured changes on refresh.</p>
-    <div class="admin-list">${artworkRows.map(a=>{const gallery=artworkGalleries.find(g=>g.id===a.gallery_id);const url=artworkClient.storage.from(artworkBucket).getPublicUrl(a.image_path).data.publicUrl;return `<article class="admin-row"><img class="artwork-manager-thumb" src="${artworkEscape(url)}" alt="${artworkEscape(a.alt_text || a.title)}"><div><h3>${artworkEscape(a.title)}</h3><p class="admin-muted">${artworkEscape(gallery?.name || 'Unassigned')} · ${a.is_visible?'Visible':'Hidden'} · ${a.is_featured?'Featured':'Not featured'}</p></div><div class="artwork-manager-actions"><button class="admin-button secondary" type="button" data-feature-art="${a.id}">${a.is_featured?'Remove from homepage':'Feature on homepage'}</button><button class="admin-button secondary" type="button" data-edit-art="${a.id}">Edit</button><button class="admin-button secondary" type="button" data-delete-art="${a.id}">Delete</button></div></article>`}).join('') || '<p class="admin-muted">No artwork uploaded yet.</p>'}</div>
+    <div class="admin-list" id="live-artwork-list">${artworkRows.map(a=>{const gallery=artworkGalleries.find(g=>g.id===a.gallery_id);const url=artworkClient.storage.from(artworkBucket).getPublicUrl(a.image_path).data.publicUrl;return `<article class="admin-row"><img class="artwork-manager-thumb" src="${artworkEscape(url)}" alt="${artworkEscape(a.alt_text || a.title)}"><div><h3>${artworkEscape(a.title)}</h3><p class="admin-muted">${artworkEscape(gallery?.name || 'Unassigned')} · ${a.is_visible?'Visible':'Hidden'} · ${a.is_featured?'Featured':'Not featured'}</p></div><div class="artwork-manager-actions"><button class="admin-button secondary" type="button" data-feature-art="${a.id}">${a.is_featured?'Remove from homepage':'Feature on homepage'}</button><button class="admin-button secondary" type="button" data-edit-art="${a.id}">Edit</button><button class="admin-button secondary" type="button" data-delete-art="${a.id}">Delete</button></div></article>`}).join('') || '<p class="admin-muted">No artwork uploaded yet.</p>'}</div>
     <p id="artwork-manager-status" class="admin-notice artwork-manager-status" role="status" aria-live="polite"></p>`;
+  /* ===== FILTER SUPABASE ARTWORK LOCALLY ===== */
+  const searchInput=target.querySelector('#live-artwork-search');
+  const galleryInput=target.querySelector('#live-artwork-gallery');
+  const artworkList=target.querySelector('#live-artwork-list');
+  const allCards=[...artworkList.querySelectorAll('.admin-row')];
+  const applyArtworkFilters=()=>{
+    const query=searchInput.value.trim().toLocaleLowerCase();
+    const galleryId=galleryInput.value;
+    let visible=0;
+    allCards.forEach((card,index)=>{
+      const artwork=artworkRows[index];
+      const haystack=[artwork.title,artwork.description,artwork.medium,artwork.artwork_year,artwork.availability_label].join(' ').toLocaleLowerCase();
+      const matches=(!galleryId||artwork.gallery_id===galleryId)&&(!query||haystack.includes(query));
+      card.hidden=!matches;
+      if(matches)visible++;
+    });
+    target.querySelector('#live-artwork-count').textContent=`Showing ${visible} of ${artworkRows.length} paintings`;
+  };
+  searchInput.addEventListener('input',applyArtworkFilters);
+  galleryInput.addEventListener('change',applyArtworkFilters);
+  applyArtworkFilters();
   document.getElementById('live-artwork-form').addEventListener('submit', saveLiveArtwork);
   document.getElementById('cancel-live-artwork').addEventListener('click',()=>renderLiveArtwork(target));
   target.querySelectorAll('[data-edit-art]').forEach(b=>b.addEventListener('click',()=>editLiveArtwork(b.dataset.editArt)));
