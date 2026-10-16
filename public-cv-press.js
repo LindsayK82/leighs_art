@@ -1,5 +1,11 @@
 /* ===== PUBLIC CV AND PRESS: SUPABASE ENTRIES ===== */
 (async function () {
+  /* ===== CV/PRESS: WAIT FOR EXISTING ABOUT PAGE RENDER ===== */
+  // The About page rebuilds #cv-content on DOMContentLoaded using replaceChildren().
+  // Wait until that completes so Supabase entries aren't erased afterward.
+  if (document.readyState === 'loading') {
+    await new Promise(resolve => document.addEventListener('DOMContentLoaded', resolve, { once: true }));
+  }
   /* ===== SUPABASE CONNECTION ===== */
   if (!window.supabase?.createClient) {
     console.error('CV/Press: Supabase library is not available.');
