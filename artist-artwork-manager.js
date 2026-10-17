@@ -37,6 +37,18 @@ async function renderLiveArtwork(target) {
       <label class="admin-field">Price wording (as displayed)<input class="admin-control" name="price_label" maxlength="300" placeholder="e.g., $3,100 or SOLD"></label>
       <!-- ===== OPTIONAL STRUCTURED SALES DATA ===== -->
       <label class="admin-field">Price in USD (numeric, optional)<input class="admin-control" type="number" name="price" min="0" step="0.01"></label>
+      <!-- ===== SHIPPING PACKAGE DETAILS ===== -->
+      <fieldset class="admin-panel"><legend><strong>Shipping package details</strong></legend>
+      <p class="admin-muted">Enter the size of the fully packed artwork, not the canvas alone. Leave measurements blank until the package is measured. Weight is in pounds; dimensions are in inches.</p>
+      <label class="admin-field">Packaging type<select class="admin-control" name="packaging_type"><option value="stretched_canvas">Stretched canvas / boxed</option><option value="rigid_mailer">Print / rigid mailer</option><option value="custom">Custom / special arrangement</option></select></label>
+      <div class="admin-inline">
+        <label class="admin-field">Package length (in)<input class="admin-control" type="number" name="package_length" min="0.01" step="0.01" placeholder="34"></label>
+        <label class="admin-field">Package width (in)<input class="admin-control" type="number" name="package_width" min="0.01" step="0.01" placeholder="34"></label>
+        <label class="admin-field">Package height (in)<input class="admin-control" type="number" name="package_height" min="0.01" step="0.01" placeholder="5"></label>
+        <label class="admin-field">Packed weight (lb)<input class="admin-control" type="number" name="package_weight" min="0.01" step="0.01" placeholder="10"></label>
+      </div>
+      <label class="admin-field">Special shipping notes<textarea class="admin-control" name="special_shipping_notes" rows="2" placeholder="e.g., rolled canvas available by arrangement"></textarea></label>
+      </fieldset>
       <label class="artwork-manager-check"><input type="checkbox" name="is_featured"> Feature on Home Page</label>
       <label class="artwork-manager-check"><input type="checkbox" name="is_visible" checked> Visible on website</label>
       <label class="artwork-manager-check"><input type="checkbox" name="is_sold"> Mark as sold</label>
@@ -99,7 +111,17 @@ async function saveLiveArtwork(event) {
       if (uploaded.error) throw uploaded.error;
     }
     const priceValue=form.elements.price.value.trim();
-    const record={title:form.elements.title.value.trim(),description:form.elements.description.value.trim()||null,gallery_id:form.elements.gallery_id.value,image_path:newPath||previous?.image_path,alt_text:form.elements.alt_text.value.trim()||null,price:priceValue===''?null:Number(priceValue),medium:form.elements.medium.value.trim()||null,dimensions:form.elements.dimensions.value.trim()||null,artwork_year:form.elements.artwork_year.value.trim()||null,availability_label:form.elements.availability_label.value.trim()||null,price_label:form.elements.price_label.value.trim()||null,is_featured:form.elements.is_featured.checked,is_visible:form.elements.is_visible.checked,is_sold:form.elements.is_sold.checked,updated_at:new Date().toISOString()};
+    /* ===== VALIDATE AND SAVE SHIPPING PACKAGE DETAILS ===== */
+    const packageNumber = name => {
+      const value = form.elements[name].value.trim();
+      return value === '' ? null : Number(value);
+    };
+    const packageFields = ['package_length','package_width','package_height','package_weight'];
+    const packageValues = Object.fromEntries(packageFields.map(name => [name, packageNumber(name)]));
+    if (Object.values(packageValues).some(value => value !== null && (!Number.isFinite(value) || value <= 0))) {
+      throw new Error('Package measurements must be positive numbers.');
+    }
+    const record={title:form.elements.title.value.trim(),description:form.elements.description.value.trim()||null,gallery_id:form.elements.gallery_id.value,image_path:newPath||previous?.image_path,alt_text:form.elements.alt_text.value.trim()||null,price:priceValue===''?null:Number(priceValue),medium:form.elements.medium.value.trim()||null,dimensions:form.elements.dimensions.value.trim()||null,artwork_year:form.elements.artwork_year.value.trim()||null,availability_label:form.elements.availability_label.value.trim()||null,price_label:form.elements.price_label.value.trim()||null,is_featured:form.elements.is_featured.checked,is_visible:form.elements.is_visible.checked,is_sold:form.elements.is_sold.checked,packaging_type:form.elements.packaging_type.value,...packageValues,special_shipping_notes:form.elements.special_shipping_notes.value.trim()||null,updated_at:new Date().toISOString()};
     const result=previous?await artworkClient.from('artworks').update(record).eq('id',id).select('id'):await artworkClient.from('artworks').insert(record).select('id');
     if(result.error) throw result.error;
     if(previous && newPath) {const removed=await artworkClient.storage.from(artworkBucket).remove([previous.image_path]);if(removed.error) console.warn('Old image cleanup failed:',removed.error);}
@@ -116,6 +138,8 @@ function editLiveArtwork(id) {
   const a=artworkRows.find(row=>row.id===id);if(!a)return;
   const f=document.getElementById('live-artwork-form');
   for(const key of ['title','description','gallery_id','alt_text','price','medium','dimensions','artwork_year','availability_label','price_label'])f.elements[key].value=a[key]??'';
+  /* ===== RESTORE SHIPPING PACKAGE DETAILS WHEN EDITING ===== */
+  for(const key of ['packaging_type','package_length','package_width','package_height','package_weight','special_shipping_notes'])f.elements[key].value=a[key]??(key==='packaging_type'?'stretched_canvas':'');
   for(const key of ['is_featured','is_visible','is_sold'])f.elements[key].checked=!!a[key];
   f.elements.artworkId.value=a.id;
   document.getElementById('artwork-form-heading').textContent='Edit artwork';
