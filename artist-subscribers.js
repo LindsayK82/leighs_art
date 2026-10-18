@@ -24,7 +24,7 @@ function subscriberStatus(record) {
 /* ===== RENDER PRIVATE SUBSCRIBER DIRECTORY ===== */
 async function renderSubscribers(target) {
   target.replaceChildren();
-  target.append(subscriberNode('p', 'View newsletter subscribers and honor unsubscribe requests. Only confirmed, currently subscribed addresses will be eligible for future newsletter delivery.', 'admin-muted'));
+  target.append(subscriberNode('p', 'View newsletter subscribers and honor unsubscribe requests. Imported contacts retain their original source, but their email permission has not yet been verified for delivery. Newsletter sending is not enabled.', 'admin-muted'));
 
   const panel = document.createElement('div');
   panel.className = 'admin-panel';
@@ -57,7 +57,8 @@ async function renderSubscribers(target) {
       const info = document.createElement('div');
       info.append(subscriberNode('strong', record.email));
       const status = subscriberStatus(record);
-      info.append(subscriberNode('p', status + ' · Joined ' + new Date(record.created_at).toLocaleDateString(), 'admin-muted'));
+      const origin = record.subscription_source === 'constant_contact' ? 'Imported from Constant Contact' : 'Website / other source';
+      info.append(subscriberNode('p', origin + ' · ' + status + ' · Joined ' + new Date(record.created_at).toLocaleDateString(), 'admin-muted'));
       row.append(info);
       if (!record.unsubscribed_at) {
         const button = document.createElement('button');
@@ -93,12 +94,13 @@ async function renderSubscribers(target) {
     const confirmed = subscriberRows.filter(r => r.confirmed_at && !r.unsubscribed_at).length;
     const pending = subscriberRows.filter(r => !r.confirmed_at && !r.unsubscribed_at).length;
     const unsubscribed = subscriberRows.filter(r => r.unsubscribed_at).length;
-    summary.textContent = `${confirmed} confirmed · ${pending} awaiting confirmation · ${unsubscribed} unsubscribed`;
+    const imported = subscriberRows.filter(r => r.subscription_source === 'constant_contact').length;
+    summary.textContent = `${subscriberRows.length} total · ${imported} imported from Constant Contact · ${confirmed} confirmed · ${pending} awaiting confirmation · ${unsubscribed} unsubscribed`;
   }
 
   /* ===== LOAD RECORDS (ADMIN RLS REQUIRED) ===== */
   const { data, error } = await subscriberClient.from('newsletter_subscribers')
-    .select('id,email,created_at,confirmed_at,unsubscribed_at')
+    .select('id,email,created_at,confirmed_at,unsubscribed_at,subscription_source')
     .order('created_at', { ascending: false })
     .limit(500);
   if (error) {
