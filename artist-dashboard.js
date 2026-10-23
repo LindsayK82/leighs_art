@@ -1,44 +1,49 @@
-/* ===== DASHBOARD DEMO DATA — FICTIONAL, LOCAL ONLY ===== */
-const DEMO_KEY='leigh-artist-dashboard-demo-v1';
-const PRINT_SIZES=['10″ × 10″','12″ × 12″','14″ × 14″','16″ × 16″','18″ × 18″','20″ × 20″'];
-const PRINT_PRICES=[250,300,350,400,450,500];
-const ARTWORK=[{id:'archivist',name:'The Archivist'},{id:'ivy',name:'Where Ivy Climbs and Love Resides'},{id:'margo',name:'Margo in Conversation'},{id:'secret',name:'The Secret Before Spring'},{id:'kiss',name:'The Lover’s Kiss'}];
-function seed(){return {orders:[{id:'DEMO-1001',buyer:'Sample Collector A',item:'The Archivist',size:'12″ × 12″',edition:'3/10',total:300,status:'New'},{id:'DEMO-1002',buyer:'Sample Collector B',item:'Margo in Conversation',size:'16″ × 16″',edition:'1/10',total:400,status:'To ship'},{id:'DEMO-1003',buyer:'Sample Collector C',item:'The Lover’s Kiss',size:'10″ × 10″',edition:'2/10',total:250,status:'Shipped'}],prices:Object.fromEntries(ARTWORK.map(a=>[a.id,[...PRINT_PRICES]])),sold:{'archivist:1':[1,2,3],'margo:3':[1],'kiss:0':[1,2]},settings:{email:'artist@example.com',shipping:'Manual quote for oversized originals',notes:'Signed artwork and certificate of authenticity included'}};}
-function load(){try{const x=JSON.parse(localStorage.getItem(DEMO_KEY));return x&&Array.isArray(x.orders)&&x.prices&&x.sold&&x.settings?x:seed();}catch{return seed();}}
-let data=load();let active='';const $=id=>document.getElementById(id);const usd=n=>new Intl.NumberFormat('en-US',{style:'currency',currency:'USD',maximumFractionDigits:0}).format(n);const safe=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-function save(){try{localStorage.setItem(DEMO_KEY,JSON.stringify(data));}catch{}}
-/* ===== DASHBOARD SUMMARY ===== */
-function summary(){ $('stat-new').textContent=data.orders.filter(o=>o.status==='New').length;$('stat-ship').textContent=data.orders.filter(o=>o.status==='New'||o.status==='To ship').length;let sold=Object.values(data.sold).reduce((n,a)=>n+a.length,0);$('stat-prints').textContent=(ARTWORK.length*PRINT_SIZES.length*10-sold).toLocaleString();$('stat-sales').textContent=usd(data.orders.reduce((n,o)=>n+o.total,0));}
-function notice(message){const e=$('demo-notice');if(e)e.textContent=message;}
-/* ===== DASHBOARD CATEGORY NAVIGATION ===== */
-function openTab(tab){active=tab;$('admin-workspace').hidden=false;$('workspace-title').textContent=({promotions:'Homepage Promotions',orders:'Orders',artwork:'Artwork' ,editions:'Print editions',settings:'Settings',cv:'CV',press:'Press',reviews:'Reviews','artwork-manager':'Gallery artwork',newsletter:'Newsletter Studio',subscribers:'Subscribers'})[tab];render();$('admin-workspace').scrollIntoView({behavior:'smooth',block:'start'});}
-function render(){const target=$('workspace-content');if(active==='artwork-manager')renderLiveArtwork(target);if(active==='orders')renderOrders(target);if(active==='promotions')renderPromotions(target);if(active==='artwork')renderPrintArtwork(target);if(active==='editions')renderEditions(target);if(active==='settings')renderSettings(target);if(['cv','press'].includes(active))renderLiveCVPress(target,active);if(active==='reviews')renderLiveReviews(target);if(active==='newsletter')renderNewsletterStudio(target);if(active==='subscribers')renderSubscribers(target);}
-/* ===== SAMPLE ORDERS AND SHIPPING ACTION ===== */
-function renderOrders(el){el.innerHTML='<p class="admin-muted">Fictional orders for testing the layout. No real customers or payments.</p><div class="admin-list">'+data.orders.map((o,i)=>`<article class="admin-row"><div><h3>${safe(o.id)} · ${safe(o.buyer)}</h3><div class="admin-muted">${safe(o.item)} · ${safe(o.size)} · Edition ${safe(o.edition)} · ${usd(o.total)}</div><p class="admin-tag">${safe(o.status)}</p></div><div class="admin-inline"><label class="admin-field">Fulfillment status<select class="admin-control" data-order="${i}"><option${o.status==='New'?' selected':''}>New</option><option${o.status==='To ship'?' selected':''}>To ship</option><option${o.status==='Shipped'?' selected':''}>Shipped</option></select></label></div></article>`).join('')+'</div><p id="demo-notice" class="admin-notice" role="status"></p>';el.querySelectorAll('[data-order]').forEach(s=>s.addEventListener('change',()=>{data.orders[Number(s.dataset.order)].status=s.value;save();summary();render();notice('Sample order updated in this browser.');}));}
-/* ===== ARTWORK SEARCH AND PRICE EDITOR ===== */
-function renderArtwork(el){el.innerHTML='<p class="admin-muted">Try changing a sample price. These edits do not change Collect Art or any live listings.</p><label class="admin-field">Find a painting<input class="admin-control" id="artwork-search" type="search" placeholder="Search artwork titles"></label><div id="artwork-list" class="admin-list" style="margin-top:20px"></div><p id="demo-notice" class="admin-notice" role="status"></p>';const search=$('artwork-search');function list(){const q=search.value.toLowerCase();$('artwork-list').innerHTML=ARTWORK.filter(a=>a.name.toLowerCase().includes(q)).map(a=>`<article class="admin-row"><div><h3>${safe(a.name)}</h3><div class="admin-muted">Limited-edition giclée prints · Six sizes</div></div><button class="admin-button secondary" type="button" data-edit="${a.id}">Edit prices</button></article>`).join('')||'<p class="admin-muted">No matching artwork.</p>';$('artwork-list').querySelectorAll('[data-edit]').forEach(b=>b.addEventListener('click',()=>priceEditor(b.dataset.edit)));}search.addEventListener('input',list);list();}
-function priceEditor(id){const a=ARTWORK.find(x=>x.id===id);const el=$('artwork-list');el.innerHTML=`<div class="admin-panel"><h3>${safe(a.name)}</h3><p class="admin-muted">Demo prices only · US dollars</p><form id="price-form" class="admin-form-grid">${PRINT_SIZES.map((size,i)=>`<label class="admin-field">${safe(size)}<input class="admin-control" type="number" min="0" max="100000" step="1" name="price${i}" value="${data.prices[id][i]}" required></label>`).join('')}<button class="admin-button" type="submit">Save sample prices</button><button class="admin-button secondary" type="button" id="cancel-price">Cancel</button></form></div>`;$('cancel-price').addEventListener('click',render.bind(null));$('price-form').addEventListener('submit',e=>{e.preventDefault();const nums=PRINT_SIZES.map((_,i)=>Number(e.target.elements['price'+i].value));if(nums.some(n=>!Number.isFinite(n)||n<0||n>100000))return;data.prices[id]=nums;save();render();notice('Sample prices saved in this browser.');});}
-/* ===== PRINT EDITION TRACKER ===== */
-function renderEditions(el){el.innerHTML='<p class="admin-muted">Each artwork and each size has its own edition of 10. Click a number to mark it reserved/sold in this demo. Live edition assignments will require the secure database.</p><div class="admin-inline"><label class="admin-field">Artwork<select id="edition-art" class="admin-control">'+ARTWORK.map(a=>`<option value="${a.id}">${safe(a.name)}</option>`).join('')+'</select></label><label class="admin-field">Print size<select id="edition-size" class="admin-control">'+PRINT_SIZES.map((s,i)=>`<option value="${i}">${safe(s)}</option>`).join('')+'</select></label></div><div id="edition-details"></div><p id="demo-notice" class="admin-notice" role="status"></p>';$('edition-art').addEventListener('change',editionDetails);$('edition-size').addEventListener('change',editionDetails);editionDetails();}
-function editionDetails(){const id=$('edition-art').value,i=Number($('edition-size').value),key=id+':'+i,sold=data.sold[key]||[];const el=$('edition-details');el.innerHTML=`<div class="admin-panel"><h3>${safe(ARTWORK.find(a=>a.id===id).name)}</h3><p class="admin-muted">${safe(PRINT_SIZES[i])} · ${10-sold.length} of 10 remaining · ${usd(data.prices[id][i])}</p><div class="admin-edition-grid">${Array.from({length:10},(_,j)=>`<label class="admin-edition-cell"><input type="checkbox" data-edition="${j+1}" ${sold.includes(j+1)?'checked':''}> <strong>${j+1}/10</strong><small>${sold.includes(j+1)?'Reserved / sold':'Available'}</small></label>`).join('')}</div></div>`;el.querySelectorAll('[data-edition]').forEach(c=>c.addEventListener('change',()=>{const n=Number(c.dataset.edition);const values=new Set(data.sold[key]||[]);c.checked?values.add(n):values.delete(n);data.sold[key]=[...values].sort((a,b)=>a-b);save();summary();editionDetails();notice('Sample edition updated in this browser.');}));}
-/* ===== STORE SETTINGS PREVIEW ===== */
-function renderSettings(el){el.innerHTML=`<div class="admin-panel"><h3>Store preferences</h3><p class="admin-muted">These settings are only a preview. No emails or shipping quotes are sent.</p><form id="settings-form" class="admin-list"><label class="admin-field">Notification email (example only)<input class="admin-control" type="email" name="email" value="${safe(data.settings.email)}" required></label><label class="admin-field">Shipping preference<select class="admin-control" name="shipping"><option ${data.settings.shipping==='Manual quote for oversized originals'?'selected':''}>Manual quote for oversized originals</option><option ${data.settings.shipping==='Manual quote for all international orders'?'selected':''}>Manual quote for all international orders</option></select></label><label class="admin-field">Order preparation notes<input class="admin-control" name="notes" value="${safe(data.settings.notes)}" maxlength="160"></label><div><button class="admin-button" type="submit">Save sample settings</button></div></form></div><p id="demo-notice" class="admin-notice" role="status"></p>`;$('settings-form').addEventListener('submit',e=>{e.preventDefault();data.settings={email:e.target.elements.email.value,shipping:e.target.elements.shipping.value,notes:e.target.elements.notes.value};save();notice('Sample settings saved in this browser.');});}
-/* ===== DASHBOARD INITIALIZATION ===== */
-document.querySelectorAll('[data-tab]').forEach(b=>b.addEventListener('click',()=>openTab(b.dataset.tab)));$('back-dashboard').addEventListener('click',()=>{$('admin-workspace').hidden=true;active='';$('dashboard-main').scrollIntoView({behavior:'smooth'});});$('reset-demo').addEventListener('click',()=>{if(confirm('Reset all fictional orders, prices, edition counts and settings in this browser?')){data=seed();save();summary();if(active)render();}});summary();
-
-/* ===== CV, PRESS AND REVIEWS: LOCAL PREVIEW DATA ===== */
-const CONTENT_KEY='leigh-dashboard-content-preview-v1';
-const CONTENT_CONFIG={
- cv:{name:'CV',fields:[['category','Category','select',['Exhibitions','Education','Awards','Collections','Professional experience','Other']],['year','Year','text'],['title','Entry title','text'],['details','Details','textarea']]},
- press:{name:'Press',fields:[['title','Article title','text'],['publication','Publication','text'],['date','Date','text'],['url','Article link (optional)','url'],['details','Description (optional)','textarea']]},
- reviews:{name:'Reviews',fields:[['quote','Review text','textarea'],['reviewer','Reviewer','text'],['publication','Publication / source (optional)','text'],['date','Date (optional)','text'],['url','Source link (optional)','url']]}
-};
-let contentData=(()=>{try{const v=JSON.parse(localStorage.getItem(CONTENT_KEY));return v&&['cv','press','reviews'].every(k=>Array.isArray(v[k]))?v:{cv:[],press:[],reviews:[]};}catch{return {cv:[],press:[],reviews:[]};}})();
-function saveContent(){try{localStorage.setItem(CONTENT_KEY,JSON.stringify(contentData));}catch{}}
-/* ===== CV, PRESS AND REVIEWS: EDITOR INTERFACE ===== */
-function renderContentManager(el,tab){const cfg=CONTENT_CONFIG[tab];el.innerHTML=`<p class="admin-muted">Preview only. Entries are saved in this browser, not published to Leigh's live website. Existing website entries have not been imported.</p><div class="admin-panel"><h3 id="content-form-title">Add ${cfg.name} entry</h3><form id="content-entry-form" class="admin-content-form"><input type="hidden" name="editIndex" value=""><div class="admin-form-grid">${cfg.fields.map(([key,label,type,options])=>`<label class="admin-field">${safe(label)}${type==='textarea'?`<textarea class="admin-control" name="${key}" rows="4" ${['details','url','publication','date'].includes(key)?'':'required'}></textarea>`:type==='select'?`<select class="admin-control" name="${key}">${options.map(o=>`<option>${safe(o)}</option>`).join('')}</select>`:`<input class="admin-control" type="${type}" name="${key}" ${['details','url','publication','date'].includes(key)?'':'required'}>`}</label>`).join('')}</div><div class="admin-inline"><button class="admin-button" type="submit">Save entry</button><button class="admin-button secondary" id="cancel-content-edit" type="button" hidden>Cancel editing</button></div></form></div><h3 class="admin-content-subtitle">Saved preview entries</h3><div id="content-entry-list" class="admin-list"></div><p id="demo-notice" class="admin-notice" role="status"></p>`;
- const form=$('content-entry-form');form.addEventListener('submit',e=>{e.preventDefault();const entry={};cfg.fields.forEach(([key])=>entry[key]=form.elements[key].value.trim());const index=form.elements.editIndex.value;if(index==='')contentData[tab].push(entry);else contentData[tab][Number(index)]=entry;saveContent();renderContentManager(el,tab);notice('Entry saved in this browser only.');});$('cancel-content-edit').addEventListener('click',()=>renderContentManager(el,tab));
- function drawList(){const list=$('content-entry-list');list.innerHTML=contentData[tab].length?contentData[tab].map((item,i)=>`<article class="admin-row"><div class="admin-content-summary"><h3>${safe(item.title||item.quote||'Untitled')}</h3><p class="admin-muted">${safe([item.category,item.year,item.publication,item.reviewer,item.date].filter(Boolean).join(' · '))}</p></div><div class="admin-inline"><button class="admin-button secondary" type="button" data-content-edit="${i}">Edit</button><button class="admin-button secondary" type="button" data-content-delete="${i}">Delete</button></div></article>`).join(''):'<p class="admin-muted">No preview entries yet. Use the form above to add one.</p>';
- list.querySelectorAll('[data-content-edit]').forEach(b=>b.addEventListener('click',()=>{const i=Number(b.dataset.contentEdit);cfg.fields.forEach(([key])=>form.elements[key].value=contentData[tab][i][key]||'');form.elements.editIndex.value=String(i);$('content-form-title').textContent='Edit '+cfg.name+' entry';$('cancel-content-edit').hidden=false;form.scrollIntoView({behavior:'smooth',block:'start'});}));list.querySelectorAll('[data-content-delete]').forEach(b=>b.addEventListener('click',()=>{if(confirm('Delete this preview entry?')){contentData[tab].splice(Number(b.dataset.contentDelete),1);saveContent();renderContentManager(el,tab);notice('Preview entry deleted.');}}));}drawList();}
-/* ===== DASHBOARD PREVIEW RESET: CONTENT ENTRIES ===== */
-$('reset-demo').addEventListener('click',()=>{ /* Content entries are intentionally kept separate from the sample store reset. */ });
+/* ===== ARTIST DASHBOARD — LIVE FEATURE ROUTER ===== */
+/* Demo-only orders, edition counts, settings, and browser storage removed. */
+(() => {
+  'use strict';
+  const labels = {
+    promotions: 'Homepage Promotions', artwork: 'Artwork',
+    'artwork-manager': 'Manage Galleries', cv: 'CV', press: 'Press',
+    reviews: 'Reviews', newsletter: 'Newsletter Studio', subscribers: 'Subscribers'
+  };
+  const renderers = {
+    promotions: 'renderPromotions', artwork: 'renderPrintArtwork',
+    'artwork-manager': 'renderLiveArtwork', cv: 'renderLiveCVPress',
+    press: 'renderLiveCVPress', reviews: 'renderLiveReviews',
+    newsletter: 'renderNewsletterStudio', subscribers: 'renderSubscribers'
+  };
+  const workspace = document.getElementById('admin-workspace');
+  const title = document.getElementById('workspace-title');
+  const content = document.getElementById('workspace-content');
+  function openTab(tab) {
+    if (!Object.hasOwn(labels, tab)) return;
+    workspace.hidden = false;
+    title.textContent = labels[tab];
+    content.innerHTML = '<p class="admin-muted">Loading…</p>';
+    const fn = window[renderers[tab]];
+    if (typeof fn !== 'function') {
+      content.innerHTML = '<p class="admin-muted" role="alert">This feature could not load. Please refresh the page.</p>';
+      console.error('Missing dashboard renderer:', renderers[tab]);
+      return;
+    }
+    try {
+      const result = (tab === 'cv' || tab === 'press') ? fn(content, tab) : fn(content);
+      if (result && typeof result.catch === 'function') result.catch(error => {
+        console.error('Dashboard feature error:', error);
+        content.innerHTML = '<p class="admin-muted" role="alert">Unable to load this section. Please try again.</p>';
+      });
+    } catch (error) {
+      console.error('Dashboard feature error:', error);
+      content.innerHTML = '<p class="admin-muted" role="alert">Unable to load this section. Please try again.</p>';
+    }
+    workspace.scrollIntoView({ behavior: 'instant', block: 'start' });
+  }
+  document.querySelectorAll('.admin-nav-card[data-tab]').forEach(button => {
+    button.addEventListener('click', () => openTab(button.dataset.tab));
+  });
+  document.getElementById('back-dashboard')?.addEventListener('click', () => {
+    workspace.hidden = true;
+    document.querySelector('.admin-intro')?.scrollIntoView({ behavior: 'instant', block: 'start' });
+  });
+})();
