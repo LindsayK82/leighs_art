@@ -1,0 +1,17 @@
+/* ===== SENSUALITY AGE ENTRANCE ===== */
+body.sensuality-locked #main-content,
+body.sensuality-locked .site-footer { display: none !important; }
+.age-entrance { min-height: 68vh; display: grid; place-items: center; padding: 4rem 1.25rem; background: #211e1c; color: #f3eee7; }
+.age-entrance-panel { max-width: 650px; text-align: center; }
+.age-eyebrow { letter-spacing: .25em; color: #c5a47c; font-size: .8rem; }
+.age-entrance h1 { font-size: clamp(2rem, 5vw, 3.25rem); font-weight: 400; margin: 1.4rem 0; }
+.age-entrance p { line-height: 1.75; }
+#age-confirm { display: block; margin: 2rem auto 1rem; background: #c5a47c; border: 0; padding: 1rem 1.5rem; font: inherit; font-weight: 600; color: #151515; cursor: pointer; }
+#age-confirm:hover, #age-confirm:focus-visible { background: #e2c39d; }
+.age-exit { color: #eee1d0; text-decoration: underline; }
+.age-entrance[hidden] { display: none !important; }
+
+/* ===== CAPTCHA STATUS ===== */
+.age-captcha { display: flex; justify-content: center; margin: 1.5rem auto 0; min-height: 65px; }
+.age-error { color: #f1b9a8; }
+#age-confirm:disabled { opacity: .5; cursor: not-allowed; }

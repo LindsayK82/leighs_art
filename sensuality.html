@@ -8,8 +8,9 @@
   <meta name="description" content="Explore Sensuality, a collection of paintings by Leigh Witherell.">
   <title>Sensuality | Leigh Witherell</title>
   <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="sensuality-entrance.css">
 </head>
-<body data-gallery-slug="sensuality">
+<body data-gallery-slug="sensuality" class="sensuality-locked">
   <!-- ===== SKIP LINK ===== -->
   <a class="skip-link" href="#main-content">Skip to artwork</a>
 
@@ -74,7 +75,21 @@
 </header>
 
 
-  <main id="main-content" class="collection-main">
+  <!-- ===== ADULT CONTENT ENTRANCE — NO ARTWORK LOADED BEFORE CONFIRMATION ===== -->
+  <main id="age-entrance" class="age-entrance" aria-labelledby="age-entrance-title">
+    <div class="age-entrance-panel">
+      <p class="age-eyebrow">LEIGH WITHERELL / SENSUALITY</p>
+      <h1 id="age-entrance-title">A note before entering</h1>
+      <p>This gallery contains mature artistic imagery, including sensual themes and nudity, intended for adults aged 18 and older.</p>
+      <p>By continuing, you confirm that you are at least 18 years old and wish to view this collection.</p>
+      <div class="age-captcha" id="age-captcha" aria-label="Human verification"></div>
+      <p id="age-error" class="age-error" role="alert" hidden></p>
+      <button id="age-confirm" type="button" disabled>I am 18 or older — Enter Gallery</button>
+      <a class="age-exit" href="galleries.html">Return to Galleries</a>
+    </div>
+  </main>
+
+  <main id="main-content" class="collection-main" hidden>
     <!-- ===== COLLECTION INTRO ===== -->
     <section class="collection-intro" aria-labelledby="collection-title">
       <a class="collection-back" href="galleries.html">← Back to Galleries</a>
@@ -97,7 +112,8 @@
   <!-- ===== FOOTER YEAR SCRIPT ===== -->
   <script>document.getElementById('year').textContent = new Date().getFullYear();</script>
   <!-- ===== DYNAMIC GALLERY ARTWORK — SUPABASE ===== -->
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="gallery-artwork.js" defer></script>
+
+  <script src="https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit" async defer></script>
+  <script src="sensuality-entrance.js" defer></script>
 </body>
 </html>
