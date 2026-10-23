@@ -1,0 +1,14 @@
+/* ===== SCHEDULED HOMEPAGE PROMOTION ===== */
+.homepage-promotion[hidden]{display:none!important}
+.homepage-promotion{background:#201d1b;color:#f4eee5;border-bottom:1px solid #76644d;padding:30px max(24px,5vw)}
+.homepage-promotion-inner{max-width:1200px;margin:auto;display:flex;align-items:center;justify-content:center;gap:32px;text-align:center}
+.homepage-promotion-copy{flex:1;max-width:780px}
+.homepage-promotion-eyebrow{font-size:11px;letter-spacing:.2em;color:#cbb08a;text-transform:uppercase}
+.homepage-promotion h2{font-size:clamp(24px,3vw,40px);font-weight:400;margin:12px 0;color:#f4eee5}
+.homepage-promotion-copy>p:not(.homepage-promotion-eyebrow){line-height:1.6;color:#ddd3c7}
+.homepage-promotion-link,.promotion-cta{display:inline-block;background:#c7a77d;color:#181818;padding:12px 20px;text-decoration:none;margin-top:12px;font-size:13px;font-weight:600}
+.homepage-promotion-link:focus-visible{outline:3px solid #fff;outline-offset:4px}
+.homepage-promotion img{width:min(28%,260px);max-height:220px;object-fit:cover}
+.promotion-preview{border:1px solid #665743;background:#201d1b;padding:24px;text-align:center;margin-top:20px;color:#f4eee5}
+.promotion-preview h3{color:#f4eee5}
+@media(max-width:650px){.homepage-promotion-inner{flex-direction:column}.homepage-promotion img{width:100%;max-width:300px}}

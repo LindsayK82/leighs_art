@@ -8,7 +8,7 @@
   <meta name="description" content="Explore current works by contemporary artist Leigh Witherell.">
   <title>Leigh Witherell | Current Works</title>
   <link rel="stylesheet" href="style.css">
-</head>
+<link rel="stylesheet" href="homepage-promotion.css"></head>
 <script src="newsletter-signup.js" defer></script>
 <body>
   <!-- ===== SKIP LINK ===== -->
@@ -76,6 +76,8 @@
 
 
   <main id="main-content">
+    <!-- ===== SCHEDULED HOMEPAGE PROMOTION ===== -->
+    <section id="homepage-promotion" class="homepage-promotion" aria-label="Current promotion" hidden></section>
     <!-- ===== HOMEPAGE INTRO ===== -->
    
 <!-- ===== HOMEPAGE INTRO ===== -->
@@ -174,6 +176,7 @@
   <!-- The public publishable key is used only for RLS-protected reads. -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="homepage-artwork.js" defer></script>
+  <script src="homepage-promotion.js" defer></script>
   <!-- ===== FOOTER YEAR SCRIPT ===== -->
   <script>document.getElementById('year').textContent = new Date().getFullYear();</script>
 </body>
