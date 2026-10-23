@@ -1,21 +1,31 @@
 /* ===== ARTIST DASHBOARD — LIVE FEATURE ROUTER ===== */
-/* Demo-only orders, edition counts, settings, and browser storage removed. */
+/* Demo-only edition counts, settings, and browser storage removed. Orders preview is nonfunctional. */
 (() => {
   'use strict';
   const labels = {
     promotions: 'Homepage Promotions', artwork: 'Artwork',
     'artwork-manager': 'Manage Galleries', cv: 'CV', press: 'Press',
-    reviews: 'Reviews', newsletter: 'Newsletter Studio', subscribers: 'Subscribers'
+    reviews: 'Reviews', newsletter: 'Newsletter Studio', subscribers: 'Subscribers', orders: 'Orders'
   };
   const renderers = {
     promotions: 'renderPromotions', artwork: 'renderPrintArtwork',
     'artwork-manager': 'renderLiveArtwork', cv: 'renderLiveCVPress',
     press: 'renderLiveCVPress', reviews: 'renderLiveReviews',
-    newsletter: 'renderNewsletterStudio', subscribers: 'renderSubscribers'
+    newsletter: 'renderNewsletterStudio', subscribers: 'renderSubscribers', orders: 'renderOrdersPreview'
   };
   const workspace = document.getElementById('admin-workspace');
   const title = document.getElementById('workspace-title');
   const content = document.getElementById('workspace-content');
+  /* ===== ORDERS: PRESENTATION-ONLY PREVIEW ===== */
+  function renderOrdersPreview(target) {
+    target.innerHTML = `<div class="admin-panel">
+      <p class="admin-tag">Coming soon · Setup in progress</p>
+      <h3>Order Management</h3>
+      <p class="admin-muted">This section will display customer purchases, fulfillment status, and shipment details once the order tools are connected.</p>
+      <p class="admin-muted">Shippo label purchasing and live order actions are not enabled yet.</p>
+    </div>`;
+  }
+  window.renderOrdersPreview = renderOrdersPreview;
   function openTab(tab) {
     if (!Object.hasOwn(labels, tab)) return;
     workspace.hidden = false;
