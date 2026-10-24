@@ -29,6 +29,27 @@ async function invoke(name,body){
  if(!response.ok||data.error)throw new Error(data.error||"Server error ("+response.status+")");
  return data;
 }
+/* ===== SAFE RECOVERY: NEVER REPEAT A PAYPAL CAPTURE ===== */
+async function recoverExistingCapture(){
+ const check=await invoke("paypal-bobsy-capture",{checkout_id:checkoutId,action:"inspect"});
+ if(!check.payment_already_captured)return false;
+ if(check.checkout_status==="paid"){
+  message("Payment already recorded. Refresh Orders to see the order.");
+  sessionStorage.removeItem(key);capture.hidden=true;reconcile.hidden=true;
+  return true;
+ }
+ if(!["processing","needs_reconciliation"].includes(check.capture_state)){
+  message("PayPal reports a capture but database state needs manual review. No further charge attempted.");
+  return true;
+ }
+ const result=await invoke("paypal-bobsy-capture",{checkout_id:checkoutId,action:"reconcile"});
+ if(result.success&&result.stage==="payment_reconciled"){
+  message("PayPal payment verified and order recorded! Refresh the Orders dashboard.");
+  sessionStorage.removeItem(key);capture.hidden=true;reconcile.hidden=true;
+  return true;
+ }
+ return false;
+}
 function restore(){if(checkoutId){start.disabled=true;capture.hidden=false;reconcile.hidden=false;message("Existing checkout found. Approve it in PayPal if needed, then verify/capture. Do not start another checkout.");}}
 start.addEventListener("click",async()=>{
  start.disabled=true;message("Creating Sandbox checkout…");
@@ -58,13 +79,17 @@ capture.addEventListener("click",async()=>{
  capture.disabled=true;message("Checking PayPal approval; no capture attempted yet…");
  try{
  const check=await invoke("paypal-bobsy-capture",{checkout_id:checkoutId,action:"inspect"});
- if(check.payment_already_captured){message("PayPal already captured this payment. Click Reconcile existing capture to record it safely.");reconcile.hidden=false;return;}
+ if(check.payment_already_captured){message("PayPal has a completed capture. Safely checking the order record...");await recoverExistingCapture();return;}
  if(!check.approved_for_capture){message("Not approved for capture yet. Complete PayPal approval first. Status: "+String(check.paypal_status||"unknown"));return;}
  if(!window.confirm("Capture the approved $1.00 PAYPAL SANDBOX test payment for Bobsy?")){message("Capture cancelled.");return;}
  const result=await invoke("paypal-bobsy-capture",{checkout_id:checkoutId,action:"capture"});
  if(result.payment_captured&&result.success){message("Sandbox payment verified and recorded! Open Leigh's Orders dashboard and refresh. Bobsy should appear.");sessionStorage.removeItem(key);}
  else message("Capture may need reconciliation. Do not retry automatically. Stage: "+String(result.stage||"unknown"));
- }catch(err){message("Capture result uncertain: "+err.message+". Do not create another payment or retry capture automatically.");}
+ }catch(err){
+ message("Capture result uncertain. Checking PayPal without attempting another charge...");
+ try{if(!(await recoverExistingCapture()))message("No confirmed completed capture found. Do not retry payment; ask Finch to review. "+err.message);}
+ catch(recoveryError){message("Payment needs review; do not retry capture. "+recoveryError.message);}
+}
  finally{capture.disabled=false;}
 });
 authorized().then(()=>{message("Artist admin verified. Ready for Bobsy's Sandbox test.");restore();}).catch(e=>{message(e.message);start.disabled=true;capture.disabled=true;});
