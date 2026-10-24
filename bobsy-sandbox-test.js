@@ -8,6 +8,7 @@ const status=document.getElementById("test-status");
 const start=document.getElementById("start-test");
 const capture=document.getElementById("capture-test");
 const approval=document.getElementById("approval");
+const reconcile=document.getElementById("reconcile-test");
 const link=document.getElementById("approval-link");
 const key="leigh-bobsy-sandbox-checkout";
 let checkoutId=sessionStorage.getItem(key);
@@ -28,7 +29,7 @@ async function invoke(name,body){
  if(!response.ok||data.error)throw new Error(data.error||"Server error ("+response.status+")");
  return data;
 }
-function restore(){if(checkoutId){start.disabled=true;capture.hidden=false;message("Existing checkout found. Approve it in PayPal if needed, then verify/capture. Do not start another checkout.");}}
+function restore(){if(checkoutId){start.disabled=true;capture.hidden=false;reconcile.hidden=false;message("Existing checkout found. Approve it in PayPal if needed, then verify/capture. Do not start another checkout.");}}
 start.addEventListener("click",async()=>{
  start.disabled=true;message("Creating Sandbox checkout…");
  try{
@@ -39,12 +40,25 @@ start.addEventListener("click",async()=>{
  message("Checkout created. Open PayPal Sandbox and approve the $1 test. Then return here to capture.");
  }catch(err){message(err.message);start.disabled=false;}
 });
+reconcile.addEventListener("click",async()=>{
+ if(!checkoutId)return;
+ reconcile.disabled=true;
+ message("Reconciling previously completed payment...");
+ try {
+  const result=await invoke("paypal-bobsy-capture",{checkout_id:checkoutId,action:"reconcile"});
+  if(result.success&&result.stage==="payment_reconciled"){
+   message("Reconciled successfully. Refresh the Orders dashboard.");
+   sessionStorage.removeItem(key);reconcile.hidden=true;capture.hidden=true;
+  } else message("Reconciliation requires review. Do not capture again.");
+ } catch(err) {message("Reconciliation error: "+err.message);}
+ finally {reconcile.disabled=false;}
+});
 capture.addEventListener("click",async()=>{
  if(!checkoutId)return;
  capture.disabled=true;message("Checking PayPal approval; no capture attempted yet…");
  try{
  const check=await invoke("paypal-bobsy-capture",{checkout_id:checkoutId,action:"inspect"});
- if(check.payment_already_captured){message("PayPal already shows a completed capture. Do not retry. Ask Finch to reconcile if order is missing.");return;}
+ if(check.payment_already_captured){message("PayPal already captured this payment. Click Reconcile existing capture to record it safely.");reconcile.hidden=false;return;}
  if(!check.approved_for_capture){message("Not approved for capture yet. Complete PayPal approval first. Status: "+String(check.paypal_status||"unknown"));return;}
  if(!window.confirm("Capture the approved $1.00 PAYPAL SANDBOX test payment for Bobsy?")){message("Capture cancelled.");return;}
  const result=await invoke("paypal-bobsy-capture",{checkout_id:checkoutId,action:"capture"});
