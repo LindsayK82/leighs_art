@@ -51,7 +51,7 @@
     function showDetails(order) {
       activeId=order.id; detail.replaceChildren();
       const panel=node('section','','admin-panel');
-      panel.append(node('h3','Order #'+order.id));
+      panel.append(node('h3','Order #'+order.id+(order.is_sandbox ? ' · SANDBOX TEST' : '')));
       const rows=[
         ['Placed',date(order.created_at)],['Customer',order.customer_name || 'Not provided'],
         ['Email',order.customer_email || 'Not provided'],['Payment',label(order.payment_status)],
@@ -90,7 +90,7 @@
         const haystack=[order.id,order.customer_name,order.customer_email,order.paypal_order_id,...orderItems.map(i=>i.artwork_title)].join(' ').toLowerCase();
         return haystack.includes(term) && (!status.value || (order.fulfillment_status || 'unfulfilled').toLowerCase()===status.value);
       });
-      summary.textContent=orders.length+' orders · '+orders.filter(o=>String(o.payment_status).toLowerCase()==='paid').length+' marked paid · '+filtered.length+' shown';
+      summary.textContent=orders.length+' orders ('+orders.filter(o=>o.is_sandbox).length+' sandbox) · '+orders.filter(o=>String(o.payment_status).toLowerCase()==='paid').length+' marked paid · '+filtered.length+' shown';
       if (!filtered.length) {
         list.append(node('p',orders.length?'No orders match these filters.':'No orders yet. Completed checkout purchases will appear here once order creation is connected.','admin-muted'));
         detail.replaceChildren();return;
@@ -98,7 +98,7 @@
       for (const order of filtered) {
         const row=node('div','','admin-row');
         const info=node('div','','admin-content-summary');
-        info.append(node('strong','Order #'+order.id+' · '+money(order.total_amount,order.currency)));
+        info.append(node('strong','Order #'+order.id+(order.is_sandbox ? ' · SANDBOX TEST' : '')+' · '+money(order.total_amount,order.currency)));
         info.append(node('p',date(order.created_at)+' · '+(order.customer_name || order.customer_email || 'Customer not recorded'),'admin-muted'));
         info.append(node('p','Payment: '+label(order.payment_status)+' · Fulfillment: '+label(order.fulfillment_status),'admin-muted'));
         const view=node('button','View details','admin-button secondary');
