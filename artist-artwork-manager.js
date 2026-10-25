@@ -4,7 +4,7 @@ const artworkBucket = 'artwork-images';
 let artworkGalleries = [];
 let artworkRows = [];
 const artworkEscape = value => String(value ?? '').replace(/[&<>"']/g, char => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
-function artworkStatus(message) { const el = document.getElementById('artwork-manager-status'); if (el) el.textContent = message; }
+function artworkStatus(message) { const el = document.getElementById('artwork-manager-status'); if (el) { el.textContent = message; el.style.fontWeight = message.startsWith('Save failed:') || message.startsWith('Use a') ? '700' : ''; } }
 
 /* ===== LOAD ARTWORK AND GALLERY DATA ===== */
 async function renderLiveArtwork(target) {
@@ -27,7 +27,7 @@ async function renderLiveArtwork(target) {
       <label class="admin-field">Artwork title<input class="admin-control" name="title" required maxlength="200"></label>
       <label class="admin-field">Description<textarea class="admin-control" name="description" rows="3"></textarea></label>
       <label class="admin-field">Gallery<select class="admin-control" name="gallery_id" required><option value="">Choose a gallery</option>${artworkGalleries.map(g=>`<option value="${g.id}">${artworkEscape(g.name)}</option>`).join('')}</select></label>
-      <label class="admin-field">Image (JPG, PNG, or WebP)<input class="admin-control" type="file" name="image" accept="image/jpeg,image/png,image/webp"></label>
+      <label class="admin-field">Image (JPG, PNG, or WebP; maximum 25 MB)<input class="admin-control" type="file" name="image" accept="image/jpeg,image/png,image/webp"></label>
       <label class="admin-field">Image description for accessibility<input class="admin-control" name="alt_text" maxlength="300"></label>
       <!-- ===== ARTWORK CATALOG DETAILS ===== -->
       <label class="admin-field">Medium / materials<input class="admin-control" name="medium" maxlength="500" placeholder="e.g., Acrylics on Cotton Canvas"></label>
@@ -53,6 +53,7 @@ async function renderLiveArtwork(target) {
       <label class="artwork-manager-check"><input type="checkbox" name="is_visible" checked> Visible on website</label>
       <label class="artwork-manager-check"><input type="checkbox" name="is_sold"> Mark as sold</label>
       <div class="admin-inline"><button class="admin-button" type="submit" id="save-live-artwork">Save artwork</button><button class="admin-button secondary" type="button" id="cancel-live-artwork" hidden>Cancel editing</button></div>
+      <p id="artwork-manager-status" class="admin-notice artwork-manager-status" role="status" aria-live="polite"></p>
     </form></div>
     <!-- ===== LIVE ARTWORK SEARCH AND GALLERY FILTER ===== -->
     <div class="admin-panel"><div class="admin-inline">
@@ -63,7 +64,7 @@ async function renderLiveArtwork(target) {
     <h3 class="admin-content-subtitle">Gallery artwork (${artworkRows.length})</h3>
     <p class="admin-muted">Unchecking Featured removes artwork from the homepage without deleting it from its gallery. The connected public homepage and galleries reflect visibility and featured changes on refresh.</p>
     <div class="admin-list" id="live-artwork-list">${artworkRows.map(a=>{const gallery=artworkGalleries.find(g=>g.id===a.gallery_id);const url=artworkClient.storage.from(artworkBucket).getPublicUrl(a.image_path).data.publicUrl;return `<article class="admin-row"><img class="artwork-manager-thumb" src="${artworkEscape(url)}" alt="${artworkEscape(a.alt_text || a.title)}"><div><h3>${artworkEscape(a.title)}</h3><p class="admin-muted">${artworkEscape(gallery?.name || 'Unassigned')} · ${a.is_visible?'Visible':'Hidden'} · ${a.is_featured?'Featured':'Not featured'}</p></div><div class="artwork-manager-actions"><button class="admin-button secondary" type="button" data-feature-art="${a.id}">${a.is_featured?'Remove from homepage':'Feature on homepage'}</button><button class="admin-button secondary" type="button" data-edit-art="${a.id}">Edit</button><button class="admin-button secondary" type="button" data-delete-art="${a.id}">Delete</button></div></article>`}).join('') || '<p class="admin-muted">No artwork uploaded yet.</p>'}</div>
-    <p id="artwork-manager-status" class="admin-notice artwork-manager-status" role="status" aria-live="polite"></p>`;
+    `;
   /* ===== FILTER SUPABASE ARTWORK LOCALLY ===== */
   const searchInput=target.querySelector('#live-artwork-search');
   const galleryInput=target.querySelector('#live-artwork-gallery');
@@ -100,7 +101,7 @@ async function saveLiveArtwork(event) {
   const previous=artworkRows.find(a=>a.id===id);
   const file=form.elements.image.files[0];
   if (!previous && !file) return artworkStatus('Please choose an image.');
-  if (file && (!['image/jpeg','image/png','image/webp'].includes(file.type) || file.size > 10*1024*1024)) return artworkStatus('Use a JPG, PNG, or WebP under 10 MB.');
+  if (file && (!['image/jpeg','image/png','image/webp'].includes(file.type) || file.size > 25*1024*1024)) return artworkStatus('Use a JPG, PNG, or WebP 25 MB or smaller.');
   button.disabled=true; artworkStatus('Saving artwork…');
   let newPath=null;
   try {
