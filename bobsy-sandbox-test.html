@@ -1,0 +1,24 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Bobsy Sandbox Checkout | Development Only</title>
+<link rel="stylesheet" href="style.css">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2" defer></script>
+<script src="artist-auth.js" defer></script>
+<script src="bobsy-sandbox-test.js" defer></script>
+</head>
+<body>
+<main style="max-width:720px;margin:5rem auto;padding:2rem">
+<h1>Bobsy's $1 PayPal Sandbox Test</h1>
+<p><strong>Development only.</strong> No live PayPal transactions or shipping labels. Sign in through the artist dashboard first. Do not publish this test page as a public checkout.</p>
+<p>Item: Bobsy · 10 × 10 print · $1.00 USD · Sandbox shipping $0.00</p>
+<button id="start-test" type="button">Create $1 Sandbox checkout</button>
+<p id="test-status" role="status" aria-live="polite">Checking artist login…</p>
+<p id="approval" hidden><a id="approval-link" href="#" target="_blank" rel="noopener noreferrer">Open PayPal Sandbox to approve</a> (opens another tab). Return here after approving.</p>
+<button id="capture-test" type="button" hidden>Verify approval and capture $1 Sandbox payment</button>
+<button id="reconcile-test" type="button" hidden>Reconcile existing PayPal capture (no new charge)</button>
+<p><a href="artist-dashboard.html">Return to Orders dashboard</a></p>
+</main>
+</body>
+</html>
