@@ -33,7 +33,14 @@ async function renderLiveArtwork(target) {
       <label class="admin-field">Medium / materials<input class="admin-control" name="medium" maxlength="500" placeholder="e.g., Acrylics on Cotton Canvas"></label>
       <label class="admin-field">Dimensions<input class="admin-control" name="dimensions" maxlength="200" placeholder="e.g., 20 x 20 inches"></label>
       <label class="admin-field">Year<input class="admin-control" name="artwork_year" maxlength="100" placeholder="e.g., 2023"></label>
-      <label class="admin-field">Availability wording<input class="admin-control" name="availability_label" maxlength="300" placeholder="e.g., Available, Not for sale, Limited-edition prints"></label>
+      <!-- ===== EXHIBITION STATUS AND GALLERY LINK ===== -->
+      <label class="admin-field">Availability wording<input class="admin-control" name="availability_label" list="artwork-availability-choices" maxlength="300" placeholder="Choose a status or enter custom wording"></label>
+      <datalist id="artwork-availability-choices"><option value="Available"><option value="On Exhibit"><option value="Not for sale"><option value="Sold"><option value="Limited-edition prints"></datalist>
+      <div id="artwork-exhibition-fields" class="admin-panel" hidden>
+        <p class="admin-muted">This original will be shown as On Exhibition with a link to the gallery, instead of a direct purchase option. A price is not required.</p>
+        <label class="admin-field">Exhibiting gallery name<input class="admin-control" name="exhibition_gallery_name" maxlength="200" placeholder="Gallery name"></label>
+        <label class="admin-field">Gallery website URL<input class="admin-control" name="exhibition_gallery_url" type="url" maxlength="2000" placeholder="https://example.com"></label>
+      </div>
       <label class="admin-field">Price wording (as displayed)<input class="admin-control" name="price_label" maxlength="300" placeholder="e.g., $3,100 or SOLD"></label>
       <!-- ===== OPTIONAL STRUCTURED SALES DATA ===== -->
       <label class="admin-field">Price in USD (numeric, optional)<input class="admin-control" type="number" name="price" min="0" step="0.01"></label>
@@ -86,7 +93,18 @@ async function renderLiveArtwork(target) {
   searchInput.addEventListener('input',applyArtworkFilters);
   galleryInput.addEventListener('change',applyArtworkFilters);
   applyArtworkFilters();
-  document.getElementById('live-artwork-form').addEventListener('submit', saveLiveArtwork);
+  /* ===== SHOW GALLERY FIELDS ONLY FOR ON EXHIBIT ===== */
+  const artworkForm=target.querySelector('#live-artwork-form');
+  const updateExhibitionFields=()=>{
+    const exhibited=/^on exhibit(?:ion)?$/i.test(artworkForm.elements.availability_label.value.trim());
+    const panel=artworkForm.querySelector('#artwork-exhibition-fields');
+    panel.hidden=!exhibited;
+    artworkForm.elements.exhibition_gallery_name.required=exhibited;
+    artworkForm.elements.exhibition_gallery_url.required=exhibited;
+  };
+  artworkForm.elements.availability_label.addEventListener('input',updateExhibitionFields);
+  updateExhibitionFields();
+  artworkForm.addEventListener('submit', saveLiveArtwork);
   document.getElementById('cancel-live-artwork').addEventListener('click',()=>renderLiveArtwork(target));
   target.querySelectorAll('[data-edit-art]').forEach(b=>b.addEventListener('click',()=>editLiveArtwork(b.dataset.editArt)));
   target.querySelectorAll('[data-feature-art]').forEach(b=>b.addEventListener('click',()=>toggleLiveFeature(b.dataset.featureArt)));
@@ -122,7 +140,16 @@ async function saveLiveArtwork(event) {
     if (Object.values(packageValues).some(value => value !== null && (!Number.isFinite(value) || value <= 0))) {
       throw new Error('Package measurements must be positive numbers.');
     }
-    const record={title:form.elements.title.value.trim(),description:form.elements.description.value.trim()||null,gallery_id:form.elements.gallery_id.value,image_path:newPath||previous?.image_path,alt_text:form.elements.alt_text.value.trim()||null,price:priceValue===''?null:Number(priceValue),medium:form.elements.medium.value.trim()||null,dimensions:form.elements.dimensions.value.trim()||null,artwork_year:form.elements.artwork_year.value.trim()||null,availability_label:form.elements.availability_label.value.trim()||null,price_label:form.elements.price_label.value.trim()||null,is_featured:form.elements.is_featured.checked,is_visible:form.elements.is_visible.checked,is_sold:form.elements.is_sold.checked,packaging_type:form.elements.packaging_type.value,...packageValues,special_shipping_notes:form.elements.special_shipping_notes.value.trim()||null,updated_at:new Date().toISOString()};
+    /* ===== EXHIBITION GALLERY VALIDATION ===== */
+    const onExhibit=/^on exhibit(?:ion)?$/i.test(form.elements.availability_label.value.trim());
+    const exhibitionName=form.elements.exhibition_gallery_name.value.trim();
+    const exhibitionUrl=form.elements.exhibition_gallery_url.value.trim();
+    if(onExhibit){
+      if(!exhibitionName||!exhibitionUrl) throw new Error('Enter the exhibiting gallery name and website URL.');
+      const parsed=new URL(exhibitionUrl);
+      if(!['https:','http:'].includes(parsed.protocol)) throw new Error('Gallery link must start with https:// or http://.');
+    }
+    const record={title:form.elements.title.value.trim(),description:form.elements.description.value.trim()||null,gallery_id:form.elements.gallery_id.value,image_path:newPath||previous?.image_path,alt_text:form.elements.alt_text.value.trim()||null,price:priceValue===''?null:Number(priceValue),medium:form.elements.medium.value.trim()||null,dimensions:form.elements.dimensions.value.trim()||null,artwork_year:form.elements.artwork_year.value.trim()||null,availability_label:onExhibit?'On Exhibit':form.elements.availability_label.value.trim()||null,exhibition_gallery_name:onExhibit?exhibitionName:null,exhibition_gallery_url:onExhibit?exhibitionUrl:null,price_label:form.elements.price_label.value.trim()||null,is_featured:form.elements.is_featured.checked,is_visible:form.elements.is_visible.checked,is_sold:form.elements.is_sold.checked,packaging_type:form.elements.packaging_type.value,...packageValues,special_shipping_notes:form.elements.special_shipping_notes.value.trim()||null,updated_at:new Date().toISOString()};
     const result=previous?await artworkClient.from('artworks').update(record).eq('id',id).select('id'):await artworkClient.from('artworks').insert(record).select('id');
     if(result.error) throw result.error;
     if(previous && newPath) {const removed=await artworkClient.storage.from(artworkBucket).remove([previous.image_path]);if(removed.error) console.warn('Old image cleanup failed:',removed.error);}
@@ -141,6 +168,9 @@ function editLiveArtwork(id) {
   for(const key of ['title','description','gallery_id','alt_text','price','medium','dimensions','artwork_year','availability_label','price_label'])f.elements[key].value=a[key]??'';
   /* ===== RESTORE SHIPPING PACKAGE DETAILS WHEN EDITING ===== */
   for(const key of ['packaging_type','package_length','package_width','package_height','package_weight','special_shipping_notes'])f.elements[key].value=a[key]??(key==='packaging_type'?'stretched_canvas':'');
+  /* ===== RESTORE EXHIBITION GALLERY DETAILS ===== */
+  for(const key of ['exhibition_gallery_name','exhibition_gallery_url'])f.elements[key].value=a[key]??'';
+  f.elements.availability_label.dispatchEvent(new Event('input'));
   for(const key of ['is_featured','is_visible','is_sold'])f.elements[key].checked=!!a[key];
   f.elements.artworkId.value=a.id;
   document.getElementById('artwork-form-heading').textContent='Edit artwork';
