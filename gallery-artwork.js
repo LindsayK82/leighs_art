@@ -43,7 +43,7 @@
     figure.append(image, caption);
     article.appendChild(figure);
 
-    if (art.description || art.medium || art.dimensions || art.artwork_year || art.availability_label || art.price_label || art.is_sold || art.price != null) {
+    if (art.description || art.medium || art.dimensions || art.artwork_year || art.availability_label || art.price_label || art.is_sold || art.price != null || art.exhibition_gallery_name) {
       const details = document.createElement('div');
       details.className = 'artwork-details';
       if (art.description) {
@@ -68,12 +68,42 @@
       addSpec('Medium', art.medium);
       addSpec('Dimensions', art.dimensions);
       addSpec('Year', art.artwork_year);
-      /* ===== PRICE AND AVAILABILITY — PRESERVE ARTIST WORDING ===== */
-      const priceText = art.price_label || (art.is_sold ? 'SOLD' : art.price != null
-        ? new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(art.price)
-        : null);
-      addSpec('Price', priceText);
-      addSpec('Availability', art.availability_label);
+      /* ===== EXHIBITION DISPLAY — HIDE PRICE AND LINK THE REPRESENTING GALLERY ===== */
+      const onExhibit = /^on\s+exhib(?:it|ition)$/i.test(String(art.availability_label || '').trim());
+      if (onExhibit) {
+        addSpec('Availability', 'On Exhibition');
+        if (art.exhibition_gallery_name) {
+          const row = document.createElement('div');
+          const term = document.createElement('dt');
+          term.textContent = 'Exhibiting Gallery';
+          const value = document.createElement('dd');
+          const url = String(art.exhibition_gallery_url || '').trim();
+          let safeUrl = null;
+          try {
+            const parsed = new URL(url);
+            if (['https:', 'http:'].includes(parsed.protocol)) safeUrl = parsed.href;
+          } catch (_) { /* Missing or invalid gallery URL: show plain text. */ }
+          if (safeUrl) {
+            const link = document.createElement('a');
+            link.href = safeUrl;
+            link.target = '_blank';
+            link.rel = 'noopener noreferrer';
+            link.textContent = art.exhibition_gallery_name;
+            value.appendChild(link);
+          } else {
+            value.textContent = art.exhibition_gallery_name;
+          }
+          row.append(term, value);
+          specs.appendChild(row);
+        }
+      } else {
+        /* ===== NORMAL PRICE AND AVAILABILITY — PRESERVE ARTIST WORDING ===== */
+        const priceText = art.price_label || (art.is_sold ? 'SOLD' : art.price != null
+          ? new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(art.price)
+          : null);
+        addSpec('Price', priceText);
+        addSpec('Availability', art.availability_label);
+      }
       if (specs.children.length) details.appendChild(specs);
       article.appendChild(details);
     }
@@ -84,7 +114,7 @@
   async function loadGalleryArtwork() {
     try {
       const { data, error } = await client.from('artworks')
-        .select('id,title,description,image_path,alt_text,price,is_sold,medium,dimensions,artwork_year,availability_label,price_label,display_order,created_at,galleries!inner(slug,is_visible)')
+        .select('id,title,description,image_path,alt_text,price,is_sold,medium,dimensions,artwork_year,availability_label,price_label,exhibition_gallery_name,exhibition_gallery_url,display_order,created_at,galleries!inner(slug,is_visible)')
         .eq('is_visible', true)
         .eq('galleries.slug', gallerySlug)
         .eq('galleries.is_visible', true)

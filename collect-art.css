@@ -17,3 +17,10 @@
 
 /* ===== STORE CATEGORY TABS ===== */
 .collect-tabs{display:flex;gap:12px;flex-wrap:wrap;margin:0 0 30px}.collect-tabs .active{background:#c9a98f;color:#151515}.collect-product .original-price{font-size:1.1rem;color:#f3eee8}.collect-product .print-size{max-width:100%}#store-status{color:#c8a58c}#store-status:empty{display:none}
+
+/* ===== ORIGINAL CANVAS EXHIBITION DISPLAY ===== */
+.collect-product .exhibition-status{font-size:1.05rem;font-weight:600;letter-spacing:.04em;color:#e8d0ba;margin:16px 0 6px}
+.collect-product .exhibition-gallery-link{display:inline-block;color:#e8c1a7;text-decoration:underline;text-underline-offset:4px;line-height:1.6;overflow-wrap:anywhere}
+.collect-product .exhibition-gallery-link:hover{color:#fff}
+.collect-product .exhibition-gallery-link:focus-visible{outline:3px solid #fff;outline-offset:3px}
+.collect-product .exhibition-gallery-name{margin-top:6px}

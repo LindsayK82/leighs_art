@@ -16,12 +16,20 @@ function availableOriginal(a){
   const availability=String(a.availability_label||'').trim().toLowerCase();
   return a.is_visible===true && a.is_sold===false && ['available','available for sale','for sale'].includes(availability) && Number.isFinite(Number(a.price)) && Number(a.price)>0;
 }
+/* ===== EXHIBITION STATUS — DISPLAY ONLY, NEVER A DIRECT SALE ===== */
+function isExhibited(a){
+  return a.is_visible===true && a.is_sold===false && ['on exhibit','on exhibition'].includes(String(a.availability_label||'').trim().toLowerCase());
+}
+function listedOriginal(a){return availableOriginal(a)||isExhibited(a);}
+function safeGalleryUrl(value){
+  try{const url=new URL(String(value||'').trim());return ['https:','http:'].includes(url.protocol)?url.href:null;}catch{return null;}
+}
 function printOptions(a){return (a.printOptions||[]).filter(p=>sizes.includes(p.size_inches)&&Number.isFinite(Number(p.price_usd))&&Number(p.price_usd)>0).sort((x,y)=>sizes.indexOf(x.size_inches)-sizes.indexOf(y.size_inches));}
-function eligible(a,kind){return kind==='print' ? a.is_visible===true && printOptions(a).length>0 : availableOriginal(a);}
+function eligible(a,kind){return kind==='print' ? a.is_visible===true && printOptions(a).length>0 : listedOriginal(a);}
 function productImage(a){return client.storage.from('artwork-images').getPublicUrl(a.image_path).data.publicUrl;}
 function getOffer(item){
  const a=products.find(p=>p.id===item.id);
- if(!a || !eligible(a,item.kind))return null;
+ if(!a || (item.kind==='original' ? !availableOriginal(a) : !eligible(a,item.kind)))return null;
  if(item.kind==='original')return {...item,title:a.title,price:Number(a.price),size:'Original canvas'};
  const option=printOptions(a).find(o=>o.size_inches===item.size);
  return option?{...item,title:a.title,price:Number(option.price_usd)}:null;
@@ -53,7 +61,7 @@ function addCart(a,kind,size){
 function renderProducts(){
  grid.replaceChildren();const q=search.value.trim().toLowerCase();
  const matches=products.filter(a=>eligible(a,category==='prints'?'print':'original') && a.title.toLowerCase().includes(q));
- status.textContent=matches.length?'':q?'No matching artwork found.':category==='prints'?'No prints are priced yet.':'No original canvases are currently listed for sale.';
+ status.textContent=matches.length?'':q?'No matching artwork found.':category==='prints'?'No prints are priced yet.':'No original canvases are currently listed.';
  for(const a of matches){
   const card=document.createElement('article');card.className='collect-product';
   const img=document.createElement('img');img.src=productImage(a);img.alt=a.alt_text||a.title+' by Leigh Witherell';img.loading='lazy';
@@ -66,6 +74,15 @@ function renderProducts(){
    for(const option of printOptions(a)){const opt=document.createElement('option');opt.value=option.size_inches;opt.textContent=option.size_inches+' in — '+money(Number(option.price_usd));select.append(opt);}
    const button=document.createElement('button');button.type='button';button.className='collect-button';button.textContent='Add print to cart';button.addEventListener('click',()=>addCart(a,'print',select.value));
    card.append(label,select,button);
+  }else if(isExhibited(a)){
+   const exhibition=document.createElement('p');exhibition.className='exhibition-status';exhibition.textContent='On Exhibition';
+   card.append(exhibition);
+   const galleryName=String(a.exhibition_gallery_name||'').trim();
+   const galleryUrl=safeGalleryUrl(a.exhibition_gallery_url);
+   if(galleryName){
+    if(galleryUrl){const link=document.createElement('a');link.className='exhibition-gallery-link';link.href=galleryUrl;link.target='_blank';link.rel='noopener noreferrer';link.textContent=galleryName;link.setAttribute('aria-label','Visit '+galleryName+' (opens in a new tab)');card.append(link);}
+    else{const name=document.createElement('p');name.className='exhibition-gallery-name';name.textContent=galleryName;card.append(name);}
+   }
   }else{
    const price=document.createElement('p');price.className='original-price';price.textContent=money(Number(a.price));
    const button=document.createElement('button');button.type='button';button.className='collect-button';button.textContent='Add original to cart';button.addEventListener('click',()=>addCart(a,'original','Original canvas'));
@@ -74,7 +91,7 @@ function renderProducts(){
   grid.append(card);
  }
 }
-function switchCategory(next){category=next;for(const kind of ['prints','originals']){const btn=document.getElementById('tab-'+kind);btn.classList.toggle('active',kind===next);btn.setAttribute('aria-pressed',String(kind===next));}document.getElementById('store-title').textContent=next==='prints'?'Fine Art Prints':'Original Canvases';document.getElementById('store-subtitle').textContent=next==='prints'?'Only sizes priced by the artist are available. Edition availability will be verified before checkout launches.':'Only original canvases marked available for sale are listed here.';renderProducts();}
+function switchCategory(next){category=next;for(const kind of ['prints','originals']){const btn=document.getElementById('tab-'+kind);btn.classList.toggle('active',kind===next);btn.setAttribute('aria-pressed',String(kind===next));}document.getElementById('store-title').textContent=next==='prints'?'Fine Art Prints':'Original Canvases';document.getElementById('store-subtitle').textContent=next==='prints'?'Only sizes priced by the artist are available. Edition availability will be verified before checkout launches.':'Browse original canvases available for purchase or currently on exhibition.';renderProducts();}
 /* ===== CART DISPLAY — PREVIEW ONLY, NO CHECKOUT ===== */
 function renderCart(){
  const box=document.getElementById('cart-items');box.replaceChildren();
@@ -93,7 +110,7 @@ search.addEventListener('input',renderProducts);
 async function init(){
  if(!client){status.textContent='Store could not initialize. Please try again later.';return;}
  try{
-  const [art,prices]=await Promise.all([client.from('artworks').select('id,title,image_path,alt_text,dimensions,price,is_sold,is_visible,availability_label').eq('is_visible',true),client.from('artwork_print_prices').select('artwork_id,size_inches,price_usd')]);
+  const [art,prices]=await Promise.all([client.from('artworks').select('id,title,image_path,alt_text,dimensions,price,is_sold,is_visible,availability_label,exhibition_gallery_name,exhibition_gallery_url').eq('is_visible',true),client.from('artwork_print_prices').select('artwork_id,size_inches,price_usd')]);
   if(art.error)throw art.error;if(prices.error)throw prices.error;
   const byArtwork=new Map();for(const row of prices.data||[]){if(!byArtwork.has(row.artwork_id))byArtwork.set(row.artwork_id,[]);byArtwork.get(row.artwork_id).push(row);}
   products=(art.data||[]).filter(a=>a.image_path).map(a=>({...a,printOptions:byArtwork.get(a.id)||[]}));
