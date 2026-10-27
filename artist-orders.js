@@ -20,14 +20,159 @@
   const addressText = address => {
     if (!address || typeof address !== 'object') return 'No shipping address recorded';
     return [address.name, address.street1 || address.address_line_1, address.street2 || address.address_line_2,
-      [address.city, address.state || address.admin_area_1, address.zip || address.postal_code].filter(Boolean).join(', '),
+      [address.city || address.admin_area_2, address.state || address.admin_area_1, address.zip || address.postal_code].filter(Boolean).join(', '),
       address.country || address.country_code].filter(Boolean).join(' · ') || 'No shipping address recorded';
+  };
+
+  /* ===== SHIPPING PACKAGE PREVIEW (NO POSTAGE PURCHASES) ===== */
+  const parsePrintSize = value => {
+    const match = String(value || '').match(/(\d+(?:\.\d+)?)\s*(?:x|×|by)\s*(\d+(?:\.\d+)?)/i);
+    if (!match) return null;
+    const dimensions = [Number(match[1]), Number(match[2])];
+    return dimensions.every(n => Number.isFinite(n) && n > 0) ? dimensions.sort((a,b)=>b-a) : null;
+  };
+  const shippingNumber = (value, name) => {
+    const number = Number(value);
+    if (!Number.isFinite(number) || number <= 0) throw new Error(name+' must be greater than zero.');
+    return number;
+  };
+  const packagePreview = (order, purchased, demo = false) => {
+    const section=node('section','','admin-panel');
+    section.append(node('h3',demo ? 'TEST ONLY · Package calculator' : 'Prepare shipping package'));
+    if (demo) section.append(node('p','Local calculation only. Not linked to any order, Shippo, or PayPal.','admin-muted'));
+    if (order.is_sandbox && !demo) {
+      section.append(node('p','Sandbox order: postage and shipping preparation are disabled.','admin-muted'));
+      return section;
+    }
+    if (String(order.payment_status).toLowerCase() !== 'paid') {
+      section.append(node('p','Shipping preparation is available after payment is confirmed.','admin-muted'));
+      return section;
+    }
+    if (['shipped','delivered'].includes(String(order.fulfillment_status).toLowerCase())) {
+      section.append(node('p','This order has already been marked shipped or delivered.','admin-muted'));
+      return section;
+    }
+    if (!order.shipping_address || typeof order.shipping_address !== 'object') {
+      section.append(node('p','A shipping address is required before preparing a package.','admin-muted'));
+      return section;
+    }
+    if (!purchased.length) {
+      section.append(node('p','No purchased items are recorded; package dimensions cannot be suggested.','admin-muted'));
+      return section;
+    }
+    const prints=purchased.filter(item=>String(item.product_type).toLowerCase()==='print');
+    const onlyPrints=prints.length===purchased.length;
+    const dimensions=prints.map(item=>parsePrintSize(item.print_size));
+    const allKnown=onlyPrints && dimensions.every(Boolean);
+    const maxLength=allKnown ? Math.max(...dimensions.map(d=>d[0]))+4 : '';
+    const maxWidth=allKnown ? Math.max(...dimensions.map(d=>d[1]))+4 : '';
+    section.append(node('p',allKnown
+      ? 'Suggested flat rigid mailer: largest print + 2 inches on every side, 1-inch depth. Confirm all prints fit together.'
+      : 'Mixed order, canvas, or unknown print size: enter the actual packed measurements manually.','admin-muted'));
+    const form=document.createElement('form');
+    form.className='shipping-package-form';
+    const fields=document.createElement('div');
+    fields.className='shipping-package-fields';
+    const inputs={};
+    for (const [field,title,value] of [
+      ['length','Length (inches)',maxLength],['width','Width (inches)',maxWidth],
+      ['height','Depth (inches)',allKnown ? 1 : ''],['weight','Packed weight (ounces)','']
+    ]) {
+      const wrap=node('label',title,'admin-muted');
+      const input=document.createElement('input');
+      input.type='number';input.min='0.01';input.step='any';input.required=true;
+      input.className='admin-control';input.value=String(value);
+      input.setAttribute('aria-label',title);
+      wrap.append(input);fields.append(wrap);inputs[field]=input;
+    }
+    const note=node('p',demo ? 'Enter a sample weight (for example, 6 oz). This is a calculator test, not a verified shipping weight.' : 'Weigh the complete sealed package before purchasing postage. Values entered here are only a preview and are not saved.','admin-muted');
+    const confirm=document.createElement('label');
+    const checkbox=document.createElement('input');checkbox.type='checkbox';checkbox.required=true;
+    confirm.append(checkbox,document.createTextNode(demo ? ' I understand these are sample measurements only.' : ' I have checked the actual packed dimensions and weight.'));
+    const button=node('button','Review package details','admin-button secondary');
+    button.type='submit';
+    const result=node('p','','admin-muted');result.setAttribute('role','status');
+    form.append(fields,note,confirm,button,result);
+    if (demo) {
+      const rateButton=node('button','Get Shippo sample rates','admin-button secondary');
+      rateButton.type='button';rateButton.disabled=true;
+      const rateResults=node('div','','shipping-rate-results');
+      rateResults.setAttribute('role','status');
+      const disableRates=()=>{rateButton.disabled=true;rateResults.replaceChildren();};
+      for (const input of Object.values(inputs)) input.addEventListener('input',disableRates);
+      checkbox.addEventListener('change',disableRates);
+      rateButton.addEventListener('click',async()=>{
+        rateButton.disabled=true;rateResults.replaceChildren(node('p','Requesting sample rates from Shippo…','admin-muted'));
+        try {
+          if(!checkbox.checked)throw new Error('Confirm the sample measurements first.');
+          const parcel={length:shippingNumber(inputs.length.value,'Length'),width:shippingNumber(inputs.width.value,'Width'),height:shippingNumber(inputs.height.value,'Depth'),weight_oz:shippingNumber(inputs.weight.value,'Packed weight')};
+          const {data,error}=await client.functions.invoke('shippo-admin-rates-test',{body:{action:'test_rates',parcel}});
+          if(error){
+            let message=error.message||'Shipping request failed';
+            if(error.context && typeof error.context.json==='function'){
+              const details=await error.context.json().catch(()=>null);
+              if(details?.error)message=details.error+(details.shippo_status?' (Shippo status '+details.shippo_status+')':'');
+            }
+            throw new Error(message);
+          }
+          if(!data?.success||!data.rate_only||!data.sample_addresses)throw new Error('Unexpected response from shipping test.');
+          rateResults.replaceChildren(node('h4','Shippo sample shipping rates'));
+          rateResults.append(node('p','Sample route: Philadelphia, PA → Hamilton, OH. These are quotes, not purchased labels.','admin-muted'));
+          if(!Array.isArray(data.rates)||!data.rates.length){
+            rateResults.append(node('p','Shippo returned no available rates for this sample package.','admin-muted'));
+          } else {
+            for(const rate of data.rates){
+              const line=node('p','','admin-muted');
+              line.append(node('strong',(rate.provider||'Carrier')+' · '+(rate.service||'Service')+': '));
+              line.append(node('span',(rate.amount||'—')+' '+(rate.currency||'USD')+(rate.estimated_days!=null?' · '+rate.estimated_days+' estimated days':'')));
+              rateResults.append(line);
+            }
+          }
+          for(const message of data.messages||[])rateResults.append(node('p',message,'admin-muted'));
+        }catch(err){rateResults.replaceChildren(node('p','Could not get sample rates: '+err.message,'admin-muted'));}
+        finally{rateButton.disabled=false;}
+      });
+      form.append(rateButton,rateResults);
+      form._enableSampleRates=()=>{rateButton.disabled=false;rateResults.replaceChildren();};
+    }
+    form.addEventListener('submit',event=>{
+      event.preventDefault();
+      try {
+        const length=shippingNumber(inputs.length.value,'Length');
+        const width=shippingNumber(inputs.width.value,'Width');
+        const height=shippingNumber(inputs.height.value,'Depth');
+        const weight=shippingNumber(inputs.weight.value,'Packed weight');
+        if (!checkbox.checked) throw new Error(demo ? 'Confirm that this is a sample calculation first.' : 'Confirm the actual packed measurements first.');
+        result.textContent=`Package confirmed for review: ${length} × ${width} × ${height} inches; ${weight} oz. No shipping rate requested and no label purchased.`;
+        if(demo && form._enableSampleRates)form._enableSampleRates();
+      } catch (error) {result.textContent=error.message;}
+    });
+    section.append(form);
+    return section;
   };
 
   /* ===== MAIN RENDERER ===== */
   window.renderLiveOrders = async function renderLiveOrders(target) {
     target.replaceChildren();
-    const intro = node('p','View paid and pending orders, purchased artwork, and shipping information. Payment capture, label purchasing, and fulfillment changes are not enabled in this first version.','admin-muted');
+    const intro = node('p','View orders and prepare package measurements. Sample rate lookups are available in the temporary test calculator; label purchases and fulfillment updates remain disabled.','admin-muted');
+    /* ===== TEMPORARY ADMIN CALCULATOR TEST ===== */
+    const testToggle=node('button','Show test package calculator','admin-button secondary');
+    testToggle.type='button';
+    testToggle.setAttribute('aria-expanded','false');
+    const testArea=node('div','','orders-calculator-test');
+    testArea.hidden=true;
+    testToggle.addEventListener('click',()=>{
+      const opening=testArea.hidden;
+      testArea.hidden=!opening;
+      testToggle.textContent=opening ? 'Hide test package calculator' : 'Show test package calculator';
+      testToggle.setAttribute('aria-expanded',String(opening));
+      if(opening){
+        testArea.replaceChildren(packagePreview(
+          {is_sandbox:true,payment_status:'paid',fulfillment_status:'unfulfilled',shipping_address:{country:'US'}},
+          [{product_type:'print',print_size:'10 × 10',quantity:1,artwork_title:'Bobsy'}],true
+        ));
+      }else testArea.replaceChildren();
+    });
     const controls = node('div','','admin-inline');
     const search = document.createElement('input');
     search.type='search'; search.className='admin-control';
@@ -44,7 +189,7 @@
     summary.setAttribute('role','status');
     const list=node('div','','admin-list');
     const detail=node('div','','orders-detail');
-    target.append(intro,controls,summary,list,detail);
+    target.append(intro,testToggle,testArea,controls,summary,list,detail);
     let orders=[], items=[], activeId=null, loadVersion=0;
 
     /* ===== DETAIL PANEL ===== */
@@ -77,7 +222,7 @@
           ' · Qty '+item.quantity+' · '+money(item.line_total,order.currency),'admin-muted');
         panel.append(line);
       }
-      panel.append(node('p','Shipping labels and fulfillment actions will be added after checkout and Shippo verification.','admin-muted'));
+      panel.append(packagePreview(order,purchased));
       detail.append(panel);
     }
 

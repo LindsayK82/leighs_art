@@ -29,27 +29,45 @@ async function invoke(name,body){
  if(!response.ok||data.error)throw new Error(data.error||"Server error ("+response.status+")");
  return data;
 }
+
 /* ===== VERIFY BOTH CHECKOUT AND ORDER ===== */
 async function verifyRecordedOrder(){
- const {data:checkout,error:checkoutError}=await client.from("art_checkout_sessions")
+ const {data:checkout,error:checkoutError}=await client
+  .from("art_checkout_sessions")
   .select("id,status,capture_state,paypal_capture_id,paid_at")
-  .eq("id",checkoutId).maybeSingle();
- if(checkoutError||!checkout||checkout.status!=="paid"||
-    checkout.capture_state!=="completed"||!checkout.paypal_capture_id||!checkout.paid_at)
-  throw new Error("Checkout payment state could not be verified.");
- const {data:order,error:orderError}=await client.from("art_orders")
+  .eq("id",checkoutId)
+  .maybeSingle();
+
+ if(checkoutError){
+  console.warn("Checkout verification read unavailable:",checkoutError.message);
+  throw new Error("Checkout verification is unavailable. Check the Orders dashboard; do not pay again.");
+ }
+
+ if(!checkout||checkout.status!=="paid"||
+    checkout.capture_state!=="completed"||
+    !checkout.paypal_capture_id||!checkout.paid_at){
+  throw new Error("Checkout state could not be verified. Check the Orders dashboard; do not pay again.");
+ }
+
+ const {data:order,error:orderError}=await client
+  .from("art_orders")
   .select("id,checkout_session_id,payment_status,paypal_capture_id")
-  .eq("checkout_session_id",checkoutId).maybeSingle();
- if(orderError||!order||order.payment_status!=="paid"||
-    order.paypal_capture_id!==checkout.paypal_capture_id)
+  .eq("checkout_session_id",checkoutId)
+  .maybeSingle();
+
+ if(orderError){
+  console.warn("Order verification read unavailable:",orderError.message);
+  throw new Error("Order verification is unavailable. Check the Orders dashboard; do not pay again.");
+ }
+
+ if(!order||order.payment_status!=="paid"||
+    order.paypal_capture_id!==checkout.paypal_capture_id){
   throw new Error("Payment confirmed, but matching order needs review. Do not pay again.");
+ }
+
  return order.id;
 }
-async function showVerifiedSuccess(){
- const orderId=await verifyRecordedOrder();
- message("Payment and matching Order #"+orderId+" verified! Refresh Leigh's Orders dashboard.");
- sessionStorage.removeItem(key);capture.hidden=true;reconcile.hidden=true;
-}
+
 /* ===== SAFE RECOVERY: NEVER REPEAT A PAYPAL CAPTURE ===== */
 async function recoverExistingCapture(){
  const check=await invoke("paypal-bobsy-capture",{checkout_id:checkoutId,action:"inspect"});
