@@ -43,7 +43,7 @@ async function renderLiveArtwork(target) {
       </div>
       <label class="admin-field">Price wording (as displayed)<input class="admin-control" name="price_label" maxlength="300" placeholder="e.g., $3,100 or SOLD"></label>
       <!-- ===== OPTIONAL STRUCTURED SALES DATA ===== -->
-      <label class="admin-field">Price in USD (numeric, optional)<input class="admin-control" type="number" name="price" min="0" step="0.01"></label>
+      <label class="admin-field">Price in USD (numeric)<input class="admin-control" type="number" name="price" min="0" step="0.01"></label>
       <!-- ===== SHIPPING PACKAGE DETAILS ===== -->
       <fieldset class="admin-panel"><legend><strong>Shipping package details</strong></legend>
       <p class="admin-muted">Enter the size of the fully packed artwork, not the canvas alone. Leave measurements blank until the package is measured. Weight is in pounds; dimensions are in inches.</p>
