@@ -121,14 +121,35 @@
           if(!Array.isArray(data.rates)||!data.rates.length){
             rateResults.append(node('p','Shippo returned no available rates for this sample package.','admin-muted'));
           } else {
-            for(const rate of data.rates){
-              const line=node('p','','admin-muted');
-              line.append(node('strong',(rate.provider||'Carrier')+' · '+(rate.service||'Service')+': '));
-              line.append(node('span',(rate.amount||'—')+' '+(rate.currency||'USD')+(rate.estimated_days!=null?' · '+rate.estimated_days+' estimated days':'')));
-              rateResults.append(line);
+            const rates=data.rates
+              .filter(rate=>Number.isFinite(Number(rate.amount))&&Number(rate.amount)>=0)
+              .sort((a,b)=>Number(a.amount)-Number(b.amount));
+            if(!rates.length)rateResults.append(node('p','No valid priced rates were returned.','admin-muted'));
+            for(const [index,rate] of rates.entries()){
+              const row=node('div','','admin-panel');
+              row.style.marginBottom='0.65rem';
+              row.style.padding='0.85rem';
+              const heading=node('div','','admin-inline');
+              heading.style.justifyContent='space-between';
+              heading.style.alignItems='center';
+              heading.append(node('strong',(rate.provider||'Carrier')+' · '+(rate.service||'Service')));
+              heading.append(node('strong',money(rate.amount,rate.currency||'USD')));
+              row.append(heading);
+              const details=rate.estimated_days!=null
+                ? 'Estimated delivery: '+rate.estimated_days+' '+(Number(rate.estimated_days)===1?'day':'days')
+                : 'Delivery estimate unavailable';
+              row.append(node('p',details,'admin-muted'));
+              if(index===0)row.append(node('p','Lowest available price','admin-muted'));
+              rateResults.append(row);
             }
           }
-          for(const message of data.messages||[])rateResults.append(node('p',message,'admin-muted'));
+          if(Array.isArray(data.messages)&&data.messages.length){
+            const warnings=document.createElement('details');
+            const summary=node('summary','Carrier notices ('+data.messages.length+')');
+            warnings.append(summary);
+            for(const message of data.messages)warnings.append(node('p',message,'admin-muted'));
+            rateResults.append(warnings);
+          }
         }catch(err){rateResults.replaceChildren(node('p','Could not get sample rates: '+err.message,'admin-muted'));}
         finally{rateButton.disabled=false;}
       });
