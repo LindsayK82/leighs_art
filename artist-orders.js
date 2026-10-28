@@ -41,8 +41,7 @@
     section.append(node('h3',demo ? 'TEST ONLY · Package calculator' : 'Prepare shipping package'));
     if (demo) section.append(node('p','Local calculation only. Not linked to any order, Shippo, or PayPal.','admin-muted'));
     if (order.is_sandbox && !demo) {
-      section.append(node('p','Sandbox order: postage and shipping preparation are disabled.','admin-muted'));
-      return section;
+      section.append(node('p','SANDBOX PREVIEW ONLY · Review package measurements for this test order. No Shippo request or label purchase is enabled here.','admin-muted'));
     }
     if (String(order.payment_status).toLowerCase() !== 'paid') {
       section.append(node('p','Shipping preparation is available after payment is confirmed.','admin-muted'));
