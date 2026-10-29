@@ -38,6 +38,26 @@
   const preview = new URLSearchParams(window.location.search).get('newsletter_preview');
   if (preview === 'success') showToast('Check Your Email!', 'If your address is eligible, a confirmation email will arrive shortly.');
   if (preview === 'error') showToast('Unable to Subscribe', 'Please try again later.', true);
+  /* ===== Safe Newsletter Form Demo =====
+     Add ?newsletter_demo=1 to the homepage URL to try the form.
+     This does NOT call Supabase, send email, or save addresses.
+     Remove the URL parameter to return to the disabled public form.
+  */
+  const demoMode = new URLSearchParams(window.location.search).get('newsletter_demo') === '1';
+  if (demoMode && form && email && button && note) {
+    email.disabled = false;
+    button.disabled = false;
+    button.type = 'submit';
+    form.setAttribute('aria-label', 'Newsletter signup demonstration');
+    note.textContent = 'DEMO MODE — No email will be sent or saved.';
+    form.addEventListener('submit', (event) => {
+      event.preventDefault();
+      if (!email.checkValidity()) { email.reportValidity(); return; }
+      showToast('Check Your Email!', 'Demo only: This is how the confirmation notice will appear after signup. No email was sent.');
+      form.reset();
+    });
+    return;
+  }
   if (!form || !email || !button || !note || !SIGNUP_READY) return;
   email.disabled = false;
   button.disabled = false;
