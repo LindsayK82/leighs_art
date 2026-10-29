@@ -41,7 +41,7 @@
     section.append(node('h3',demo ? 'TEST ONLY · Package calculator' : 'Prepare shipping package'));
     if (demo) section.append(node('p','Local calculation only. Not linked to any order, Shippo, or PayPal.','admin-muted'));
     if (order.is_sandbox && !demo) {
-      section.append(node('p','SANDBOX PREVIEW ONLY · Review package measurements for this test order. No Shippo request or label purchase is enabled here.','admin-muted'));
+      section.append(node('p','SANDBOX TEST ONLY · Confirm the package to request test shipping rates for this order. Label purchases remain disabled.','admin-muted'));
     }
     if (String(order.payment_status).toLowerCase() !== 'paid') {
       section.append(node('p','Shipping preparation is available after payment is confirmed.','admin-muted'));
@@ -72,15 +72,24 @@
     form.className='shipping-package-form';
     const fields=document.createElement('div');
     fields.className='shipping-package-fields';
+    fields.style.display='grid';
+    fields.style.gridTemplateColumns='repeat(auto-fit, minmax(min(100%, 190px), 1fr))';
+    fields.style.gap='16px';
+    fields.style.alignItems='end';
     const inputs={};
     for (const [field,title,value] of [
       ['length','Length (inches)',maxLength],['width','Width (inches)',maxWidth],
       ['height','Depth (inches)',allKnown ? 1 : ''],['weight','Packed weight (ounces)','']
     ]) {
       const wrap=node('label',title,'admin-muted');
+      wrap.style.display='flex';
+      wrap.style.flexDirection='column';
+      wrap.style.gap='8px';
+      wrap.style.minWidth='0';
       const input=document.createElement('input');
       input.type='number';input.min='0.01';input.step='any';input.required=true;
       input.className='admin-control';input.value=String(value);
+      input.style.width='100%';input.style.minWidth='0';input.style.boxSizing='border-box';
       input.setAttribute('aria-label',title);
       wrap.append(input);fields.append(wrap);inputs[field]=input;
     }
@@ -92,8 +101,8 @@
     button.type='submit';
     const result=node('p','','admin-muted');result.setAttribute('role','status');
     form.append(fields,note,confirm,button,result);
-    if (demo) {
-      const rateButton=node('button','Get Shippo sample rates','admin-button secondary');
+    if (demo || order.is_sandbox) {
+      const rateButton=node('button',demo ? 'Get Shippo sample rates' : 'Get shipping rates (test)','admin-button secondary');
       rateButton.type='button';rateButton.disabled=true;
       const rateResults=node('div','','shipping-rate-results');
       rateResults.setAttribute('role','status');
@@ -101,11 +110,11 @@
       for (const input of Object.values(inputs)) input.addEventListener('input',disableRates);
       checkbox.addEventListener('change',disableRates);
       rateButton.addEventListener('click',async()=>{
-        rateButton.disabled=true;rateResults.replaceChildren(node('p','Requesting sample rates from Shippo…','admin-muted'));
+        rateButton.disabled=true;rateResults.replaceChildren(node('p',demo ? 'Requesting sample rates from Shippo…' : 'Requesting order-specific test rates from Shippo…','admin-muted'));
         try {
-          if(!checkbox.checked)throw new Error('Confirm the sample measurements first.');
+          if(!checkbox.checked)throw new Error('Confirm the package measurements first.');
           const parcel={length:shippingNumber(inputs.length.value,'Length'),width:shippingNumber(inputs.width.value,'Width'),height:shippingNumber(inputs.height.value,'Depth'),weight_oz:shippingNumber(inputs.weight.value,'Packed weight')};
-          const {data,error}=await client.functions.invoke('shippo-admin-rates-test',{body:{action:'test_rates',parcel}});
+          const {data,error}=await client.functions.invoke('shippo-admin-rates-test',{body:demo ? {action:'test_rates',parcel} : {action:'order_quote',order_id:order.id,parcel}});
           if(error){
             let message=error.message||'Shipping request failed';
             if(error.context && typeof error.context.json==='function'){
@@ -114,17 +123,25 @@
             }
             throw new Error(message);
           }
-          if(!data?.success||!data.rate_only||!data.sample_addresses)throw new Error('Unexpected response from shipping test.');
-          rateResults.replaceChildren(node('h4','Shippo sample shipping rates'));
-          rateResults.append(node('p','Sample route: Philadelphia, PA → Hamilton, OH. These are quotes, not purchased labels.','admin-muted'));
+          if(!data?.success||!data.rate_only||(demo ? !data.sample_addresses : data.action!=='order_quote'||data.order_id!==order.id||!data.sandbox||data.labels_enabled!==false))throw new Error('Unexpected response from shipping test.');
+          rateResults.replaceChildren(node('h4',demo ? 'Shippo sample shipping rates' : 'Order #'+order.id+' · Test shipping rates'));
+          rateResults.append(node('p',demo ? 'Sample route: Philadelphia, PA → Hamilton, OH. These are quotes, not purchased labels.' : 'Rates use the saved order destination and Leigh’s configured shipping origin. TEST ONLY · No labels purchased.','admin-muted'));
           if(!Array.isArray(data.rates)||!data.rates.length){
-            rateResults.append(node('p','Shippo returned no available rates for this sample package.','admin-muted'));
+            rateResults.append(node('p','Shippo returned no available rates for this package.','admin-muted'));
           } else {
             const rates=data.rates
               .filter(rate=>Number.isFinite(Number(rate.amount))&&Number(rate.amount)>=0)
               .sort((a,b)=>Number(a.amount)-Number(b.amount));
             if(!rates.length)rateResults.append(node('p','No valid priced rates were returned.','admin-muted'));
-            for(const [index,rate] of rates.entries()){
+            // Selection is available only for order-specific sandbox quotes, never the sample calculator.
+            const choices=[];
+            const reviewPanel=node('section','','admin-panel');
+            reviewPanel.hidden=true;
+            reviewPanel.style.marginTop='1rem';
+            if(!demo){
+              reviewPanel.append(node('h4','Review selected shipping service'));
+            }
+            for(const [index,rate] of rates.entries()){ 
               const row=node('div','','admin-panel');
               row.style.marginBottom='0.65rem';
               row.style.padding='0.85rem';
@@ -133,6 +150,16 @@
               heading.style.alignItems='center';
               heading.append(node('strong',(rate.provider||'Carrier')+' · '+(rate.service||'Service')));
               heading.append(node('strong',money(rate.amount,rate.currency||'USD')));
+              if(!demo){
+                const choose=document.createElement('input');
+                choose.type='radio';choose.name='shipping-rate-'+order.id;
+                choose.value=String(index);
+                choose.setAttribute('aria-label','Select '+(rate.provider||'Carrier')+' '+(rate.service||'Service')+' for '+money(rate.amount,rate.currency||'USD'));
+                const chooseLabel=node('label',' Select this service','admin-muted');
+                chooseLabel.prepend(choose);
+                row.append(chooseLabel);
+                choices.push({input:choose,rate});
+              }
               row.append(heading);
               const details=rate.estimated_days!=null
                 ? 'Estimated delivery: '+rate.estimated_days+' '+(Number(rate.estimated_days)===1?'day':'days')
@@ -140,6 +167,69 @@
               row.append(node('p',details,'admin-muted'));
               if(index===0)row.append(node('p','Lowest available price','admin-muted'));
               rateResults.append(row);
+            }
+            if(!demo&&choices.length){
+              let labelFlow=null;
+              const showReview=()=>{
+                const selected=choices.find(choice=>choice.input.checked);
+                reviewPanel.replaceChildren(node('h4','Review selected shipping service'));
+                if(!selected){reviewPanel.hidden=true;return;}
+                const rate=selected.rate;
+                const parcel={length:inputs.length.value,width:inputs.width.value,height:inputs.height.value,weight:inputs.weight.value};
+                reviewPanel.append(
+                  node('p','Carrier: '+(rate.provider||'Carrier')),
+                  node('p','Service: '+(rate.service||'Service')),
+                  node('p','Estimated postage: '+money(rate.amount,rate.currency||'USD')),
+                  node('p','Delivery estimate: '+(rate.estimated_days!=null?rate.estimated_days+' '+(Number(rate.estimated_days)===1?'day':'days'):'Not available')),
+                  node('p','Package: '+parcel.length+' × '+parcel.width+' × '+parcel.height+' inches; '+parcel.weight+' oz'),
+                  node('p','Order #'+order.id+' · SANDBOX REVIEW ONLY. This selection is not saved. No shipping label will be purchased.','admin-muted')
+                );
+                if(labelFlow)reviewPanel.append(labelFlow);
+                reviewPanel.hidden=false;
+              };
+              labelFlow=node('div','','shipping-label-flow');
+              labelFlow.style.marginTop='1rem';
+              const generateButton=node('button','Generate Label','admin-button secondary');
+              generateButton.type='button';
+              const confirmation=node('section','','admin-panel');
+              confirmation.hidden=true;
+              confirmation.style.marginTop='1rem';
+              const openConfirmation=()=>{
+                const selected=choices.find(choice=>choice.input.checked);
+                if(!selected)return;
+                const rate=selected.rate;
+                confirmation.replaceChildren(node('h4','Confirm shipping label details'));
+                confirmation.append(
+                  node('p','Order #'+order.id+' · SANDBOX TEST ONLY','admin-muted'),
+                  node('h5','Ship to'),
+                  node('p',addressText(order.shipping_address)),
+                  node('h5','Ship from'),
+                  node('p','Leigh’s configured shipping origin (stored securely on the server).','admin-muted'),
+                  node('h5','Selected service'),
+                  node('p',(rate.provider||'Carrier')+' · '+(rate.service||'Service')),
+                  node('p','Estimated postage: '+money(rate.amount,rate.currency||'USD')),
+                  node('p','Estimated delivery: '+(rate.estimated_days!=null?rate.estimated_days+' '+(Number(rate.estimated_days)===1?'day':'days'):'Not available')),
+                  node('h5','Package details'),
+                  node('p',inputs.length.value+' × '+inputs.width.value+' × '+inputs.height.value+' inches; '+inputs.weight.value+' oz'),
+                  node('p','Review all details before generating a label. Test labels cannot be used for real shipments. No label has been generated or purchased.','admin-muted')
+                );
+                const actions=node('div','','admin-inline');
+                actions.style.display='flex';actions.style.gap='0.75rem';actions.style.flexWrap='wrap';
+                const back=node('button','Back','admin-button secondary');back.type='button';
+                back.addEventListener('click',()=>{confirmation.hidden=true;reviewPanel.hidden=false;});
+                const finalButton=node('button','Confirm & Generate Label','admin-button');
+                finalButton.type='button';finalButton.disabled=true;
+                finalButton.title='Available after the sandbox label-generation backend is connected';
+                actions.append(back,finalButton);
+                confirmation.append(actions,node('p','Final confirmation will be enabled in the next step, after the secure sandbox label-generation function is ready.','admin-muted'));
+                reviewPanel.hidden=true;
+                confirmation.hidden=false;
+              };
+              generateButton.addEventListener('click',openConfirmation);
+              labelFlow.append(generateButton);
+              reviewPanel.append(labelFlow);
+              for(const choice of choices)choice.input.addEventListener('change',()=>{confirmation.hidden=true;showReview();});
+              rateResults.append(reviewPanel,confirmation);
             }
           }
           if(Array.isArray(data.messages)&&data.messages.length){
@@ -149,7 +239,7 @@
             for(const message of data.messages)warnings.append(node('p',message,'admin-muted'));
             rateResults.append(warnings);
           }
-        }catch(err){rateResults.replaceChildren(node('p','Could not get sample rates: '+err.message,'admin-muted'));}
+        }catch(err){rateResults.replaceChildren(node('p','Could not get shipping rates: '+err.message,'admin-muted'));}
         finally{rateButton.disabled=false;}
       });
       form.append(rateButton,rateResults);
@@ -164,7 +254,7 @@
         const weight=shippingNumber(inputs.weight.value,'Packed weight');
         if (!checkbox.checked) throw new Error(demo ? 'Confirm that this is a sample calculation first.' : 'Confirm the actual packed measurements first.');
         result.textContent=`Package confirmed for review: ${length} × ${width} × ${height} inches; ${weight} oz. No shipping rate requested and no label purchased.`;
-        if(demo && form._enableSampleRates)form._enableSampleRates();
+        if((demo || order.is_sandbox) && form._enableSampleRates)form._enableSampleRates();
       } catch (error) {result.textContent=error.message;}
     });
     section.append(form);
@@ -174,7 +264,7 @@
   /* ===== MAIN RENDERER ===== */
   window.renderLiveOrders = async function renderLiveOrders(target) {
     target.replaceChildren();
-    const intro = node('p','View orders and prepare package measurements. Sample rate lookups are available in the temporary test calculator; label purchases and fulfillment updates remain disabled.','admin-muted');
+    const intro = node('p','View orders and prepare package measurements. Test rate lookups are available for paid sandbox orders and in the temporary calculator; label purchases and fulfillment updates remain disabled.','admin-muted');
     /* ===== TEMPORARY ADMIN CALCULATOR TEST ===== */
     const testToggle=node('button','Show test package calculator','admin-button secondary');
     testToggle.type='button';
