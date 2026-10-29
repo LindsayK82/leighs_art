@@ -182,7 +182,7 @@
                   node('p','Estimated postage: '+money(rate.amount,rate.currency||'USD')),
                   node('p','Delivery estimate: '+(rate.estimated_days!=null?rate.estimated_days+' '+(Number(rate.estimated_days)===1?'day':'days'):'Not available')),
                   node('p','Package: '+parcel.length+' × '+parcel.width+' × '+parcel.height+' inches; '+parcel.weight+' oz'),
-                  node('p','Order #'+order.id+' · SANDBOX REVIEW ONLY. This selection is not saved. No shipping label will be purchased.','admin-muted')
+                  node('p','Order #'+order.id+' · SANDBOX REVIEW ONLY. Your choice is saved when you click Generate Label. No label will be purchased.','admin-muted')
                 );
                 if(labelFlow)reviewPanel.append(labelFlow);
                 reviewPanel.hidden=false;
@@ -194,10 +194,28 @@
               const confirmation=node('section','','admin-panel');
               confirmation.hidden=true;
               confirmation.style.marginTop='1rem';
-              const openConfirmation=()=>{
+              const openConfirmation=async()=>{
                 const selected=choices.find(choice=>choice.input.checked);
                 if(!selected)return;
                 const rate=selected.rate;
+                if(!rate.rate_id){window.alert('Missing Shippo rate ID. Please request fresh rates.');return;}
+                generateButton.disabled=true;
+                generateButton.textContent='Saving selected service…';
+                try{
+                  const {data,error}=await client.functions.invoke('shippo-admin-rates-test',{
+                    body:{action:'select_rate',order_id:order.id,rate_id:rate.rate_id}
+                  });
+                  if(error){
+                    let msg=error.message||'Unable to save selected service';
+                    if(error.context&&typeof error.context.json==='function'){
+                      const details=await error.context.json().catch(()=>null);
+                      if(details?.error)msg=details.error;
+                    }
+                    throw new Error(msg);
+                  }
+                  if(!data?.success||data.action!=='select_rate'||data.order_id!==order.id||data.rate_id!==rate.rate_id||data.labels_enabled!==false)throw new Error('Unexpected shipping selection response');
+                }catch(error){window.alert('Could not save shipping service: '+error.message);return;}
+                finally{generateButton.disabled=false;generateButton.textContent='Generate Label';}
                 confirmation.replaceChildren(node('h4','Confirm shipping label details'));
                 confirmation.append(
                   node('p','Order #'+order.id+' · SANDBOX TEST ONLY','admin-muted'),
@@ -211,17 +229,49 @@
                   node('p','Estimated delivery: '+(rate.estimated_days!=null?rate.estimated_days+' '+(Number(rate.estimated_days)===1?'day':'days'):'Not available')),
                   node('h5','Package details'),
                   node('p',inputs.length.value+' × '+inputs.width.value+' × '+inputs.height.value+' inches; '+inputs.weight.value+' oz'),
-                  node('p','Review all details before generating a label. Test labels cannot be used for real shipments. No label has been generated or purchased.','admin-muted')
+                  node('p','Selected rate saved securely. You can now generate a sandbox-only test label after final confirmation.','admin-muted')
                 );
                 const actions=node('div','','admin-inline');
                 actions.style.display='flex';actions.style.gap='0.75rem';actions.style.flexWrap='wrap';
                 const back=node('button','Back','admin-button secondary');back.type='button';
                 back.addEventListener('click',()=>{confirmation.hidden=true;reviewPanel.hidden=false;});
                 const finalButton=node('button','Confirm & Generate Label','admin-button');
-                finalButton.type='button';finalButton.disabled=true;
-                finalButton.title='Available after the sandbox label-generation backend is connected';
+                finalButton.type='button';
+                const labelResult=node('div','','shipping-label-result');
+                labelResult.setAttribute('role','status');
+                finalButton.addEventListener('click',async()=>{
+                  if(!window.confirm('Generate one TEST shipping label for order #'+order.id+'? This will not purchase real postage.'))return;
+                  finalButton.disabled=true;back.disabled=true;
+                  finalButton.textContent='Generating test label…';
+                  labelResult.replaceChildren(node('p','Contacting Shippo and saving the label record…','admin-muted'));
+                  try{
+                    const {data,error}=await client.functions.invoke('shippo-admin-rates-test',{body:{action:'generate_test_label',order_id:order.id}});
+                    if(error){
+                      let msg=error.message||'Test label request failed';
+                      if(error.context&&typeof error.context.json==='function'){
+                        const details=await error.context.json().catch(()=>null);
+                        if(details?.error)msg=details.error;
+                      }
+                      throw new Error(msg);
+                    }
+                    if(!data?.success||data.action!=='generate_test_label'||data.order_id!==order.id||!data.sandbox)throw new Error('Unexpected label response');
+                    labelResult.replaceChildren(node('p',data.already_generated?'Existing sandbox label retrieved.':'Sandbox label created successfully!','admin-muted'));
+                    if(data.label_url&&/^https:\/\//i.test(data.label_url)){
+                      const link=node('a','Open printable test label (PDF)');
+                      link.href=data.label_url;link.target='_blank';link.rel='noopener noreferrer';
+                      labelResult.append(link);
+                    }
+                    if(data.tracking_number)labelResult.append(node('p','Test tracking number: '+data.tracking_number));
+                    labelResult.append(node('p','TEST LABEL ONLY — NOT VALID FOR REAL SHIPPING.','admin-muted'));
+                    finalButton.textContent='Test label generated';
+                  }catch(err){
+                    labelResult.replaceChildren(node('p','Label not confirmed: '+err.message,'admin-muted'));
+                    labelResult.append(node('p','Do not retry until we check the database for this order.','admin-muted'));
+                    finalButton.textContent='Check label status before retrying';
+                  }
+                });
                 actions.append(back,finalButton);
-                confirmation.append(actions,node('p','Final confirmation will be enabled in the next step, after the secure sandbox label-generation function is ready.','admin-muted'));
+                confirmation.append(actions,labelResult,node('p','This generates a Shippo TEST label only. Test labels cannot be used to mail packages.','admin-muted'));
                 reviewPanel.hidden=true;
                 confirmation.hidden=false;
               };
@@ -243,6 +293,52 @@
         finally{rateButton.disabled=false;}
       });
       form.append(rateButton,rateResults);
+      if(!demo){
+        const statusButton=node('button','Check existing Shippo label status','admin-button secondary');
+        statusButton.type='button';
+        const statusResult=node('div','','shipping-label-status');
+        statusResult.setAttribute('role','status');
+        statusButton.addEventListener('click',async()=>{
+          statusButton.disabled=true;
+          statusResult.replaceChildren(node('p','Looking up the existing Shippo transaction (read-only)…','admin-muted'));
+          try{
+            const {data,error}=await client.functions.invoke('shippo-admin-rates-test',{
+              body:{action:'check_label_status',order_id:order.id}
+            });
+            if(error){
+              let message=error.message||'Transaction lookup failed';
+              if(error.context&&typeof error.context.json==='function'){
+                const details=await error.context.json().catch(()=>null);
+                if(details?.error)message=details.error;
+              }
+              throw new Error(message);
+            }
+            if(!data?.success||data.order_id!==order.id||data.read_only!==true)
+              throw new Error('Unexpected response from transaction lookup');
+            statusResult.replaceChildren(
+              node('p','Saved status: '+(data.local_status||'Unknown')),
+              node('p','Shippo status: '+(data.shippo_status||'Unavailable')),
+              node('p','Existing transaction found: '+(data.transaction_found?'Yes':'No')),
+              node('p','Label available: '+(data.has_label?'Yes':'No'))
+            );
+            if(Array.isArray(data.messages)&&data.messages.length){
+              statusResult.append(node('h5','Shippo error details'));
+              for(const item of data.messages){
+                statusResult.append(node('p',
+                  [item.source,item.code,item.text].filter(Boolean).join(' · ')||'No detail provided',
+                  'admin-muted'));
+              }
+            }else{
+              statusResult.append(node('p','Shippo returned no detailed messages.','admin-muted'));
+            }
+            statusResult.append(node('p','This check did not generate or purchase a label.','admin-muted'));
+          }catch(err){
+            statusResult.replaceChildren(node('p','Could not check Shippo transaction: '+err.message,'admin-muted'));
+          }finally{statusButton.disabled=false;}
+        });
+        form.append(statusButton,statusResult);
+      }
+
       form._enableSampleRates=()=>{rateButton.disabled=false;rateResults.replaceChildren();};
     }
     form.addEventListener('submit',event=>{
@@ -264,7 +360,7 @@
   /* ===== MAIN RENDERER ===== */
   window.renderLiveOrders = async function renderLiveOrders(target) {
     target.replaceChildren();
-    const intro = node('p','View orders and prepare package measurements. Test rate lookups are available for paid sandbox orders and in the temporary calculator; label purchases and fulfillment updates remain disabled.','admin-muted');
+    const intro = node('p','View orders and prepare package measurements. Test rate lookups are available for paid sandbox orders and in the temporary calculator; real postage purchases and fulfillment updates remain disabled.','admin-muted');
     /* ===== TEMPORARY ADMIN CALCULATOR TEST ===== */
     const testToggle=node('button','Show test package calculator','admin-button secondary');
     testToggle.type='button';
