@@ -94,12 +94,83 @@ function renderProducts(){
 function switchCategory(next){category=next;for(const kind of ['prints','originals']){const btn=document.getElementById('tab-'+kind);btn.classList.toggle('active',kind===next);btn.setAttribute('aria-pressed',String(kind===next));}document.getElementById('store-title').textContent=next==='prints'?'Fine Art Prints':'Original Canvases';document.getElementById('store-subtitle').textContent=next==='prints'?'Only sizes priced by the artist are available. Edition availability will be verified before checkout launches.':'Browse original canvases available for purchase or currently on exhibition.';renderProducts();}
 /* ===== CART DISPLAY — PREVIEW ONLY, NO CHECKOUT ===== */
 function renderCart(){
+ invalidateShippingPreview('Cart changed. Request a new shipping quote.');
  const box=document.getElementById('cart-items');box.replaceChildren();
  cart.forEach((item,index)=>{const line=document.createElement('div');line.className='cart-line';const label=document.createElement('span');label.textContent=item.title+' · '+(item.kind==='original'?'Original canvas':item.size+' in print')+' · '+money(item.price);const remove=document.createElement('button');remove.type='button';remove.textContent='Remove';remove.setAttribute('aria-label','Remove '+item.title);remove.addEventListener('click',()=>{cart.splice(index,1);renderCart();notify('Item removed');});line.append(label,remove);box.append(line);});
  if(!cart.length)box.textContent='Your cart is empty.';
  document.getElementById('cart-count').textContent=cart.length;document.getElementById('floating-cart-count').textContent=cart.length;document.getElementById('floating-cart').setAttribute('aria-label','Open shopping cart, '+cart.length+' items');document.getElementById('cart-total').textContent=money(cart.reduce((sum,x)=>sum+x.price,0));
  try{localStorage.setItem(CART_KEY,JSON.stringify(cart.map(({id,kind,size})=>({id,kind,size}))));}catch{}
 }
+/* ===== ISOLATED SHIPPING PREVIEW — NEVER CREATES PAYMENT ===== */
+const shippingPreviewForm=document.getElementById('shipping-preview-form');
+const shippingPreviewResult=document.getElementById('shipping-preview-result');
+let shippingPreviewRevision=0;
+function invalidateShippingPreview(message='Address changed. Request new shipping rates for this destination.'){
+ shippingPreviewRevision++;
+ if(shippingPreviewResult){shippingPreviewResult.replaceChildren();shippingPreviewResult.textContent=message;}
+}
+shippingPreviewForm?.addEventListener('input',event=>{
+ if(event.target?.matches('input, select, textarea'))invalidateShippingPreview();
+});
+shippingPreviewForm?.addEventListener('change',event=>{
+ if(event.target?.matches('input, select, textarea'))invalidateShippingPreview();
+});
+shippingPreviewForm?.addEventListener('submit',async event=>{
+ event.preventDefault();
+ const revision=++shippingPreviewRevision;
+ shippingPreviewResult.replaceChildren();
+ if(cart.length!==1 || cart[0].kind!=='print'){
+  shippingPreviewResult.textContent='Shipping preview currently supports exactly one print.';return;
+ }
+ const btn=shippingPreviewForm.querySelector('button[type="submit"]');btn.disabled=true;
+ shippingPreviewResult.textContent='Requesting shipping rates…';
+ try{
+  const fields=new FormData(shippingPreviewForm);
+  const address={street1:String(fields.get('street1')||'').trim(),city:String(fields.get('city')||'').trim(),zip:String(fields.get('zip')||'').trim(),country:'GB'};
+  if(!/^[A-Z]{1,2}[0-9][A-Z0-9]?\s*[0-9][A-Z]{2}$/i.test(address.zip))throw Error('Enter a valid UK postcode.');
+  const checkout=await client.functions.invoke('paypal-live-checkout',{body:{items:cart.map(x=>({id:x.id,kind:x.kind,size:x.size}))}});
+  if(revision!==shippingPreviewRevision)return;
+  if(checkout.error||!checkout.data?.checkout_id||!checkout.data?.checkout_token)throw Error('Unable to create a temporary checkout session.');
+  const quote=await client.functions.invoke('checkout-shipping-rates',{body:{checkout_id:checkout.data.checkout_id,checkout_token:checkout.data.checkout_token,test_international_quote:true,test_destination:address}});
+  if(revision!==shippingPreviewRevision)return;
+  if(quote.error||!Array.isArray(quote.data?.rates))throw Error(quote.data?.error||'Unable to retrieve shipping rates.');
+  shippingPreviewResult.replaceChildren();
+  const heading=document.createElement('h4');heading.textContent='Choose a shipping service';shippingPreviewResult.append(heading);
+  const choices=document.createElement('fieldset');choices.className='shipping-rate-choices';
+  const legend=document.createElement('legend');legend.textContent='Available shipping options (estimates)';choices.append(legend);
+  const summary=document.createElement('div');summary.className='shipping-preview-summary';
+  const updateSummary=(rate)=>{
+   const shipping=Number(rate.amount);const subtotal=Number(quote.data.subtotal);
+   summary.replaceChildren();
+   const addRow=(label,value,emphasis=false)=>{const row=document.createElement('div');row.className='shipping-summary-row'+(emphasis?' shipping-summary-total':'');const name=document.createElement('span');name.textContent=label;const amount=document.createElement('strong');amount.textContent=money(value);row.append(name,amount);summary.append(row);};
+   addRow('Artwork',subtotal);addRow('Estimated shipping',shipping);addRow('Estimated total',subtotal+shipping,true);
+  };
+  const saveSelection=async(rate)=>{
+   const inputs=[...choices.querySelectorAll('input')];inputs.forEach(input=>input.disabled=true);
+   const oldText=note.textContent;note.textContent='Confirming selected rate…';
+   try{
+    const selection=await client.functions.invoke('checkout-shipping-rates',{body:{checkout_id:checkout.data.checkout_id,checkout_token:checkout.data.checkout_token,test_international_quote:true,test_destination:address,selected_service:rate.service}});
+    if(revision!==shippingPreviewRevision)return;
+    if(selection.error||!selection.data?.selection_saved_to_test_table)throw Error(selection.data?.error||'Could not confirm this rate. Please request a new quote.');
+    updateSummary({amount:selection.data.selected_shipping_amount});
+    note.textContent='Selected rate verified and saved for testing only. No payment or label created.';
+   }catch(error){if(revision===shippingPreviewRevision){note.textContent=error.message||'Unable to verify rate.';inputs.forEach(input=>input.checked=false);}}
+   finally{if(revision===shippingPreviewRevision)inputs.forEach(input=>input.disabled=false);}
+  };
+  quote.data.rates.forEach((rate,index)=>{
+   const label=document.createElement('label');label.className='shipping-rate-option';
+   const input=document.createElement('input');input.type='radio';input.name='shipping-rate';input.value=String(index);input.checked=index===0;
+   const service=document.createElement('span');service.className='shipping-rate-name';service.textContent=rate.service||'Shipping service';
+   const price=document.createElement('strong');price.textContent=money(Number(rate.amount));
+   label.append(input,service,price);choices.append(label);
+   input.addEventListener('change',()=>{if(input.checked)saveSelection(rate);});
+  });
+  shippingPreviewResult.append(choices,summary);
+  if(quote.data.rates.length)updateSummary(quote.data.rates[0]);
+  const note=document.createElement('p');note.className='shipping-preview-note';note.textContent='Estimates may change. No payment or label has been created.';shippingPreviewResult.append(note);
+ }catch(error){if(revision===shippingPreviewRevision)shippingPreviewResult.textContent=error?.message||'Shipping preview unavailable.';}
+ finally{btn.disabled=false;}
+});
 /* ===== CART DRAWER CONTROLS ===== */
 function showCart(show){const panel=document.getElementById('cart-panel');if(show){previousFocus=document.activeElement;panel.hidden=false;document.getElementById('cart-close').focus();}else{panel.hidden=true;previousFocus?.focus?.();}document.getElementById('cart-toggle').setAttribute('aria-expanded',String(show));document.getElementById('floating-cart').setAttribute('aria-expanded',String(show));document.body.classList.toggle('cart-open',show);}
 document.getElementById('cart-toggle').addEventListener('click',()=>showCart(true));document.getElementById('floating-cart').addEventListener('click',()=>showCart(true));document.getElementById('cart-close').addEventListener('click',()=>showCart(false));
