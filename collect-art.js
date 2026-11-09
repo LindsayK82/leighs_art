@@ -94,6 +94,7 @@ function renderProducts(){
 function switchCategory(next){category=next;for(const kind of ['prints','originals']){const btn=document.getElementById('tab-'+kind);btn.classList.toggle('active',kind===next);btn.setAttribute('aria-pressed',String(kind===next));}document.getElementById('store-title').textContent=next==='prints'?'Fine Art Prints':'Original Canvases';document.getElementById('store-subtitle').textContent=next==='prints'?'Only sizes priced by the artist are available. Edition availability will be verified before checkout launches.':'Browse original canvases available for purchase or currently on exhibition.';renderProducts();}
 /* ===== CART DISPLAY — PREVIEW ONLY, NO CHECKOUT ===== */
 function renderCart(){
+ verifiedCheckout=null;
  invalidateShippingPreview('Cart changed. Request a new shipping quote.');
  const box=document.getElementById('cart-items');box.replaceChildren();
  cart.forEach((item,index)=>{const line=document.createElement('div');line.className='cart-line';const label=document.createElement('span');label.textContent=item.title+' · '+(item.kind==='original'?'Original canvas':item.size+' in print')+' · '+money(item.price);const remove=document.createElement('button');remove.type='button';remove.textContent='Remove';remove.setAttribute('aria-label','Remove '+item.title);remove.addEventListener('click',()=>{cart.splice(index,1);renderCart();notify('Item removed');});line.append(label,remove);box.append(line);});
@@ -105,13 +106,50 @@ function renderCart(){
 const domesticForm=document.getElementById('domestic-address-form');
 const domesticResult=document.getElementById('domestic-address-result');
 const usStates={AL:'Alabama',AK:'Alaska',AZ:'Arizona',AR:'Arkansas',CA:'California',CO:'Colorado',CT:'Connecticut',DE:'Delaware',FL:'Florida',GA:'Georgia',HI:'Hawaii',ID:'Idaho',IL:'Illinois',IN:'Indiana',IA:'Iowa',KS:'Kansas',KY:'Kentucky',LA:'Louisiana',ME:'Maine',MD:'Maryland',MA:'Massachusetts',MI:'Michigan',MN:'Minnesota',MS:'Mississippi',MO:'Missouri',MT:'Montana',NE:'Nebraska',NV:'Nevada',NH:'New Hampshire',NJ:'New Jersey',NM:'New Mexico',NY:'New York',NC:'North Carolina',ND:'North Dakota',OH:'Ohio',OK:'Oklahoma',OR:'Oregon',PA:'Pennsylvania',RI:'Rhode Island',SC:'South Carolina',SD:'South Dakota',TN:'Tennessee',TX:'Texas',UT:'Utah',VT:'Vermont',VA:'Virginia',WA:'Washington',WV:'West Virginia',WI:'Wisconsin',WY:'Wyoming'};
+// Live SDK loads only after explicit payment activation. It never blocks gallery startup.
+const PAYPAL_LIVE_CLIENT_ID='BAA3R4YDxIWp5MR5tJOpmVj3Kp8Uto7jRTLtOYl232N6IHnfx0oBbtQtR7XvoRvI0l4fMj_WFwUyxLDtcM';
+const LIVE_CHECKOUT_ENABLED=false; // Keep false until tax and end-to-end payment checks pass.
+let verifiedCheckout=null;
+function loadPayPalSDK(){
+ if(window.paypal?.Buttons)return Promise.resolve(window.paypal);
+ return new Promise((resolve,reject)=>{
+  const script=document.createElement('script');
+  script.src='https://www.paypal.com/sdk/js?client-id='+encodeURIComponent(PAYPAL_LIVE_CLIENT_ID)+'&currency=USD&intent=capture&components=buttons';
+  script.onload=()=>window.paypal?.Buttons?resolve(window.paypal):reject(Error('PayPal SDK unavailable'));
+  script.onerror=()=>reject(Error('Unable to load PayPal'));
+  document.head.append(script);
+ });
+}
+async function renderLivePayPal(checkout){
+ if(!LIVE_CHECKOUT_ENABLED)return;
+ const host=document.getElementById('paypal-live-buttons');
+ const note=document.getElementById('paypal-live-status');
+ if(!host||!note)return;
+ const paypal=await loadPayPalSDK();
+ host.hidden=false;host.replaceChildren();
+ await paypal.Buttons({
+  createOrder:async()=>{
+   if(verifiedCheckout!==checkout)throw Error('Please verify your address again');
+   const result=await client.functions.invoke('paypal-live-create-order',{body:{checkout_id:checkout.checkout_id,checkout_token:checkout.checkout_token}});
+   if(result.error||!result.data?.id)throw Error(result.data?.error||'Live payment is not available');
+   return result.data.id;
+  },
+  onApprove:async data=>{
+   const result=await client.functions.invoke('paypal-live-capture',{body:{checkout_id:checkout.checkout_id,checkout_token:checkout.checkout_token,paypal_order_id:data.orderID}});
+   if(result.error||result.data?.status!=='COMPLETED')throw Error('Payment may have been received. Do not retry; contact the artist.');
+   note.textContent='Payment confirmed. Order #'+result.data.order_id+'. Thank you!';
+   host.hidden=true;
+  },
+  onError:()=>{note.textContent='Checkout could not be completed. If you approved a payment, do not retry; contact the artist.';}
+ }).render(host);
+}
 let domesticRevision=0;
 if(domesticForm){
  const stateSelect=domesticForm.elements.namedItem('state');
  for(const [code,name] of Object.entries(usStates)){
   const option=document.createElement('option');option.value=code;option.textContent=name;stateSelect.append(option);
  }
- const invalidate=()=>{domesticRevision++;domesticResult.textContent='';};
+ const invalidate=()=>{domesticRevision++;verifiedCheckout=null;domesticResult.textContent='';};
  domesticForm.addEventListener('input',invalidate);
  domesticForm.addEventListener('change',invalidate);
  domesticForm.addEventListener('submit',async event=>{
@@ -134,7 +172,17 @@ if(domesticForm){
    const check=await client.functions.invoke('art-checkout-verify-address',{body:{checkout_id:session.data.checkout_id,checkout_token:session.data.checkout_token,address}});
    if(revision!==domesticRevision)return;
    if(check.error||check.data?.verified!==true)throw Error(check.data?.error||'Carrier could not verify your address.');
-   domesticResult.textContent='Address verified and saved for this temporary checkout. Domestic shipping: FREE. Tax and live payment are not enabled yet.';
+   verifiedCheckout={checkout_id:session.data.checkout_id,checkout_token:session.data.checkout_token};
+   domesticResult.textContent='Address verified. Checking checkout arithmetic…';
+   const preview=await client.functions.invoke('art-checkout-total-preview',{body:{checkout_id:verifiedCheckout.checkout_id,checkout_token:verifiedCheckout.checkout_token}});
+   if(revision!==domesticRevision)return;
+   if(preview.error||preview.data?.success!==true){
+    domesticResult.textContent='Address verified, but total preview could not be confirmed. No payment attempted. '+(preview.data?.error||preview.error?.message||'');
+    return;
+   }
+   const p=preview.data;
+   domesticResult.textContent='Address verified. Checkout preview: artwork $'+p.subtotal+', shipping $'+p.shipping+', provisional tax $'+p.tax+', total $'+p.total+'. Preview only — payment disabled; tax review pending.';
+   if(LIVE_CHECKOUT_ENABLED)await renderLivePayPal(verifiedCheckout);
   }catch(error){if(revision===domesticRevision)domesticResult.textContent=error?.message||'Address verification is temporarily unavailable.';}
   finally{btn.disabled=false;}
  });
