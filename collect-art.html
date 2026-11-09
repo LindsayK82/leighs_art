@@ -61,7 +61,38 @@
 <main id="main-content" class="collect-shell"><header class="collect-intro"><p class="collect-eyebrow">LEIGH WITHERELL · FINE ART</p><h1>Collect Art</h1><p>Find a work that speaks to you. Explore available original canvases and signed, limited-edition giclée prints.</p><p class="collect-notice">Store preview · Checkout is not yet connected. Prices shown exclude shipping and applicable taxes.</p></header>
 <!-- ===== FILTERS AND CART ===== --><div class="collect-toolbar"><label for="art-search">Find artwork <input id="art-search" type="search" placeholder="Search by title…"></label><button id="cart-toggle" class="collect-button" type="button" aria-controls="cart-panel" aria-expanded="false">Cart (<span id="cart-count">0</span>)</button></div>
 <!-- ===== STORE TABS ===== --><div class="collect-tabs" role="group" aria-label="Artwork type"><button type="button" class="collect-button active" id="tab-prints" aria-pressed="true">Fine Art Prints</button><button type="button" class="collect-button" id="tab-originals" aria-pressed="false">Original Canvases</button></div><!-- ===== LIVE SUPABASE PRODUCTS ===== --><section aria-labelledby="store-title"><h2 id="store-title">Fine Art Prints</h2><p id="store-subtitle" class="collect-subtitle">Only sizes priced by the artist are available. Edition availability will be verified before checkout launches.</p><p id="store-status" role="status" aria-live="polite">Loading artwork…</p><div id="collect-grid" class="collect-grid"></div></section>
-<!-- ===== CART PANEL ===== --><section id="cart-panel" class="cart-panel" role="dialog" aria-modal="true" aria-labelledby="cart-title" hidden><div class="cart-top"><h2 id="cart-title">Your selections</h2><button id="cart-close" type="button" class="collect-button">Close</button></div><div id="cart-items"></div><p class="cart-total">Subtotal <strong id="cart-total">$0</strong></p><p class="collect-subtitle">Shipping, taxes, duties and inventory will be verified at checkout when the store launches.</p><div class="shipping-preview" id="shipping-preview" style="margin:1rem 0;padding:1rem;border:1px solid #888;border-radius:8px">
+<!-- ===== CART PANEL ===== --><section id="cart-panel" class="cart-panel" role="dialog" aria-modal="true" aria-labelledby="cart-title" hidden><div class="cart-top"><h2 id="cart-title">Your selections</h2><button id="cart-close" type="button" class="collect-button">Close</button></div><div id="cart-items"></div><p class="cart-total">Subtotal <strong id="cart-total">$0</strong></p><p class="collect-subtitle">Shipping, taxes, duties and inventory will be verified at checkout when the store launches.</p><style>
+/* Scoped styling: does not change other forms or checkout logic. */
+.domestic-address-preview{margin:1.25rem 0;padding:clamp(1rem,3vw,1.75rem);border:1px solid #777;border-radius:12px;min-width:0}
+.domestic-address-preview h3{margin:0 0 .8rem;line-height:1.25}
+.domestic-address-preview .domestic-intro{margin:0 0 1.25rem;line-height:1.5}
+#domestic-address-form{display:grid;grid-template-columns:minmax(0,1fr);gap:1rem;min-width:0}
+#domestic-address-form .domestic-field{display:flex;flex-direction:column;align-items:stretch;gap:.4rem;min-width:0;font-size:1rem;line-height:1.35}
+#domestic-address-form input,#domestic-address-form select{box-sizing:border-box;display:block;width:100%;min-width:0;max-width:100%;min-height:44px;padding:.65rem .75rem;border:1px solid #999;border-radius:6px;background:#303030;color:#fff;font:inherit;line-height:1.35}
+#domestic-address-form input:focus-visible,#domestic-address-form select:focus-visible{outline:2px solid #f1c98d;outline-offset:2px}
+#domestic-address-form .domestic-address-location{display:grid;grid-template-columns:minmax(0,1.4fr) minmax(0,.9fr) minmax(0,1fr);gap:.85rem;min-width:0}
+#domestic-address-form .domestic-country{margin:0;font-size:.95rem}
+#domestic-address-form button{justify-self:start;max-width:100%;white-space:normal}
+.domestic-address-result{margin-top:.8rem;line-height:1.5;overflow-wrap:anywhere}
+@media(max-width:650px){#domestic-address-form .domestic-address-location{grid-template-columns:minmax(0,1fr)}}
+</style>
+<section class="domestic-address-preview" aria-labelledby="domestic-address-title">
+<h3 id="domestic-address-title">U.S. delivery address — verification</h3>
+<p class="domestic-intro">Domestic shipping is free. Check your address with the shipping carrier. Your address will be saved to a temporary checkout session; sales tax and payment are not yet enabled.</p>
+<form id="domestic-address-form" autocomplete="on">
+<label class="domestic-field">Full name <input name="full_name" autocomplete="name" required maxlength="120"></label>
+<label class="domestic-field">Email <input name="email" type="email" autocomplete="email" required maxlength="254"></label>
+<label class="domestic-field">Street address <input name="street1" autocomplete="shipping address-line1" required maxlength="120"></label>
+<label class="domestic-field">Apartment, suite, etc. (optional) <input name="street2" autocomplete="shipping address-line2" maxlength="120"></label>
+<div class="domestic-address-location"><label class="domestic-field">City <input name="city" autocomplete="shipping address-level2" required maxlength="80"></label>
+<label class="domestic-field">State <select name="state" autocomplete="shipping address-level1" required><option value="">Choose a state</option></select></label>
+<label class="domestic-field">ZIP code <input name="zip" autocomplete="shipping postal-code" required inputmode="numeric" pattern="[0-9]{5}(-[0-9]{4})?" maxlength="10" placeholder="12345"></label></div>
+<p class="domestic-country">Country: United States</p>
+<button class="collect-button" type="submit">Verify delivery address</button>
+</form>
+<div class="domestic-address-result" id="domestic-address-result" role="status" aria-live="polite"></div>
+</section>
+<div class="shipping-preview" id="shipping-preview" style="margin:1rem 0;padding:1rem;border:1px solid #888;border-radius:8px">
 <h3>International shipping preview (testing only)</h3>
 <p>Preview shipping rates to a UK address. No orders, payments or shipping labels will be created.</p>
 <form id="shipping-preview-form">

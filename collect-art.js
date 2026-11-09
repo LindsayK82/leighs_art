@@ -101,6 +101,44 @@ function renderCart(){
  document.getElementById('cart-count').textContent=cart.length;document.getElementById('floating-cart-count').textContent=cart.length;document.getElementById('floating-cart').setAttribute('aria-label','Open shopping cart, '+cart.length+' items');document.getElementById('cart-total').textContent=money(cart.reduce((sum,x)=>sum+x.price,0));
  try{localStorage.setItem(CART_KEY,JSON.stringify(cart.map(({id,kind,size})=>({id,kind,size}))));}catch{}
 }
+/* ===== DOMESTIC ADDRESS VERIFICATION — NO PAYMENT ===== */
+const domesticForm=document.getElementById('domestic-address-form');
+const domesticResult=document.getElementById('domestic-address-result');
+const usStates={AL:'Alabama',AK:'Alaska',AZ:'Arizona',AR:'Arkansas',CA:'California',CO:'Colorado',CT:'Connecticut',DE:'Delaware',FL:'Florida',GA:'Georgia',HI:'Hawaii',ID:'Idaho',IL:'Illinois',IN:'Indiana',IA:'Iowa',KS:'Kansas',KY:'Kentucky',LA:'Louisiana',ME:'Maine',MD:'Maryland',MA:'Massachusetts',MI:'Michigan',MN:'Minnesota',MS:'Mississippi',MO:'Missouri',MT:'Montana',NE:'Nebraska',NV:'Nevada',NH:'New Hampshire',NJ:'New Jersey',NM:'New Mexico',NY:'New York',NC:'North Carolina',ND:'North Dakota',OH:'Ohio',OK:'Oklahoma',OR:'Oregon',PA:'Pennsylvania',RI:'Rhode Island',SC:'South Carolina',SD:'South Dakota',TN:'Tennessee',TX:'Texas',UT:'Utah',VT:'Vermont',VA:'Virginia',WA:'Washington',WV:'West Virginia',WI:'Wisconsin',WY:'Wyoming'};
+let domesticRevision=0;
+if(domesticForm){
+ const stateSelect=domesticForm.elements.namedItem('state');
+ for(const [code,name] of Object.entries(usStates)){
+  const option=document.createElement('option');option.value=code;option.textContent=name;stateSelect.append(option);
+ }
+ const invalidate=()=>{domesticRevision++;domesticResult.textContent='';};
+ domesticForm.addEventListener('input',invalidate);
+ domesticForm.addEventListener('change',invalidate);
+ domesticForm.addEventListener('submit',async event=>{
+  event.preventDefault();
+  if(!domesticForm.reportValidity())return;
+  const revision=++domesticRevision;
+  if(!client){domesticResult.textContent='Checkout service is unavailable.';return;}
+  if(!cart.length){domesticResult.textContent='Add artwork to your cart before verifying your delivery address.';return;}
+  const fields=new FormData(domesticForm);
+  const address={full_name:String(fields.get('full_name')||'').trim(),email:String(fields.get('email')||'').trim(),street1:String(fields.get('street1')||'').trim(),street2:String(fields.get('street2')||'').trim(),city:String(fields.get('city')||'').trim(),state:String(fields.get('state')||'').trim(),zip:String(fields.get('zip')||'').trim(),country:'US'};
+  if(address.street1.length<3||address.city.length<2||!/^[0-9]{5}(?:-[0-9]{4})?$/.test(address.zip)){
+   domesticResult.textContent='Please check the street, city, and ZIP code.';return;
+  }
+  const btn=domesticForm.querySelector('button[type="submit"]');btn.disabled=true;
+  domesticResult.textContent='Checking your address with the shipping carrier…';
+  try{
+   const session=await client.functions.invoke('paypal-live-checkout',{body:{items:cart.map(x=>({id:x.id,kind:x.kind,size:x.size}))}});
+   if(revision!==domesticRevision)return;
+   if(session.error||!session.data?.checkout_id||!session.data?.checkout_token)throw Error(session.data?.error||'Unable to create a temporary checkout session.');
+   const check=await client.functions.invoke('art-checkout-verify-address',{body:{checkout_id:session.data.checkout_id,checkout_token:session.data.checkout_token,address}});
+   if(revision!==domesticRevision)return;
+   if(check.error||check.data?.verified!==true)throw Error(check.data?.error||'Carrier could not verify your address.');
+   domesticResult.textContent='Address verified and saved for this temporary checkout. Domestic shipping: FREE. Tax and live payment are not enabled yet.';
+  }catch(error){if(revision===domesticRevision)domesticResult.textContent=error?.message||'Address verification is temporarily unavailable.';}
+  finally{btn.disabled=false;}
+ });
+}
 /* ===== ISOLATED SHIPPING PREVIEW — NEVER CREATES PAYMENT ===== */
 const shippingPreviewForm=document.getElementById('shipping-preview-form');
 const shippingPreviewResult=document.getElementById('shipping-preview-result');

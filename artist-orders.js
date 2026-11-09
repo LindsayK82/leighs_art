@@ -390,7 +390,9 @@
       const option=document.createElement('option'); option.value=value; option.textContent=title; status.append(option);
     }
     const refresh=node('button','Refresh orders','admin-button secondary'); refresh.type='button';
-    controls.append(search,status,refresh);
+    const exportCsv=node('button','Export accounting CSV','admin-button secondary');
+    exportCsv.type='button';exportCsv.disabled=true;
+    controls.append(search,status,refresh,exportCsv);
     const summary=node('p','Loading orders…','admin-muted');
     summary.setAttribute('role','status');
     const list=node('div','','admin-list');
@@ -463,10 +465,38 @@
       }
     }
 
+    /* ===== ACCOUNTING CSV (ADMIN VIEW ONLY) ===== */
+    const csvCell=value=>{
+      // Protect spreadsheets from formula injection when opening customer-supplied fields.
+      let valueText=String(value??'');
+      if(/^[\s]*[=+@-]/.test(valueText))valueText="'"+valueText;
+      return '"'+valueText.replace(/"/g,'""')+'"';
+    };
+    exportCsv.addEventListener('click',()=>{
+      if(!orders.length)return;
+      const headers=['Order ID','Order date','Sandbox','Payment status','Fulfillment status','Customer name','Customer email','Ship-to state','Ship-to country','Artwork','Product type','Print size','Quantity','Unit price USD','Line total USD','Order artwork price USD (legacy field)','Customer shipping charged USD','Sales tax collected USD','Order total USD','PayPal order ID','PayPal capture ID'];
+      const rows=[headers];
+      for(const order of orders){
+        const purchased=items.filter(item=>item.order_id===order.id);
+        const address=order.shipping_address||{};
+        const base=[order.id,order.created_at,order.is_sandbox?'YES':'NO',order.payment_status,order.fulfillment_status,order.customer_name,order.customer_email,address.state||address.admin_area_1||'',address.country||address.country_code||''];
+        const end=[order.artwork_price??'',order.shipping_cost??'', 'NOT RECORDED',order.total_amount??'',order.paypal_order_id,order.paypal_capture_id];
+        for(const item of (purchased.length?purchased:[null])){
+          const line=item||{};
+          rows.push([...base,line.artwork_title||order.artwork_title||'',line.product_type||'',line.print_size||'',line.quantity??'',line.unit_price??'',line.line_total??'',...end]);
+        }
+      }
+      const csv='\uFEFF'+rows.map(row=>row.map(csvCell).join(',')).join('\r\n');
+      const blob=new Blob([csv],{type:'text/csv;charset=utf-8;'});
+      const url=URL.createObjectURL(blob);
+      const anchor=document.createElement('a');anchor.href=url;anchor.download='leigh-art-accounting-'+new Date().toISOString().slice(0,10)+'.csv';
+      document.body.append(anchor);anchor.click();anchor.remove();
+      setTimeout(()=>URL.revokeObjectURL(url),1000);
+    });
     /* ===== LOAD ADMIN-ONLY DATA THROUGH RLS ===== */
     async function load() {
       const current=++loadVersion;
-      refresh.disabled=true;summary.textContent='Loading orders…';
+      refresh.disabled=true;exportCsv.disabled=true;summary.textContent='Loading orders…';
       const [orderResult,itemResult]=await Promise.all([
         client.from('art_orders').select('*').order('created_at',{ascending:false}).limit(200),
         client.from('art_order_items').select('*').order('created_at',{ascending:false}).limit(1000)
@@ -478,7 +508,7 @@
         list.replaceChildren(node('p',orderResult.error?.message || itemResult.error?.message || 'Unknown error','admin-muted'));
         detail.replaceChildren();return;
       }
-      orders=orderResult.data || [];items=itemResult.data || [];draw();
+      orders=orderResult.data || [];items=itemResult.data || [];exportCsv.disabled=!orders.length;draw();
     }
     search.addEventListener('input',draw);status.addEventListener('change',draw);
     refresh.addEventListener('click',load);
