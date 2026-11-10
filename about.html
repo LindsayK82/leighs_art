@@ -970,6 +970,18 @@ document.addEventListener("DOMContentLoaded", () => {
   });
 
   container.replaceChildren(fragment);
+
+// Keep dashboard-added CV entries at the top,
+// even if another script finishes rendering later.
+const observer = new MutationObserver(() => {
+  const liveEntries = container.querySelector(".cv-live-entries");
+
+  if (liveEntries && container.firstElementChild !== liveEntries) {
+    container.prepend(liveEntries);
+  }
+});
+
+observer.observe(container, { childList: true });
 });
   </script>
 <!-- ===== PUBLIC CV AND PRESS: LIVE SUPABASE ENTRIES ===== -->
