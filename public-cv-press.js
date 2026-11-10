@@ -63,7 +63,6 @@
         .from('cv_entries')
         .select('*')
         .eq('published', true)
-        .order('sort_order', { ascending: true })
         .order('created_at', { ascending: false });
       if (error) throw error;
       if (data?.length) {
@@ -78,7 +77,7 @@
           addText(article, 'p', entry.description);
           section.appendChild(article);
         }
-        cv.appendChild(section);
+        cv.prepend(section);
       }
     } catch (error) {
       console.error('CV/Press: Failed to load published CV entries:', error);
@@ -95,7 +94,6 @@
         .from('press_entries')
         .select('*')
         .eq('published', true)
-        .order('sort_order', { ascending: true })
         .order('created_at', { ascending: false });
       if (error) throw error;
       if (data?.length) {
@@ -113,7 +111,7 @@
           article.appendChild(details);
           section.appendChild(article);
         }
-        press.appendChild(section);
+        press.prepend(section);
       }
     } catch (error) {
       console.error('CV/Press: Failed to load published Press entries:', error);
